@@ -1,230 +1,114 @@
-import {
-  FaInstagram,
-  FaWhatsapp,
-  FaFacebookF,
-} from "react-icons/fa";
+import React, { useState } from 'react';
+import { FiPhone, FiMail, FiMapPin, FiCheckCircle } from 'react-icons/fi';
 
-import {
-  FiPhone,
-  FiMail,
-  FiMapPin,
-  FiSend,
-} from "react-icons/fi";
+export default function Contact() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
+  const [sent, setSent] = useState(false);
 
-function Contact() {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (name && email) {
+      setSent(true);
+      setName("");
+      setEmail("");
+      setMsg("");
+      setTimeout(() => setSent(false), 5000);
+    }
+  };
+
   return (
-    <section className="bg-[#f8f8f8] min-h-screen py-16 md:py-24">
-
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
-
-        {/* ========================= */}
-        {/* TOP SECTION */}
-        {/* ========================= */}
-        <div className="mb-16">
-
-          <p className="uppercase tracking-[6px] text-gray-400 text-sm font-medium">
-            Contact Support
-          </p>
-
-          <h1 className="text-4xl md:text-6xl font-bold mt-4 leading-tight">
-            Let’s Talk With Us
-          </h1>
-
-          <div className="w-24 h-[4px] bg-black mt-6"></div>
-
-        </div>
-
-        {/* ========================= */}
-        {/* MAIN CONTENT */}
-        {/* ========================= */}
-        <div className="grid lg:grid-cols-2 gap-10">
-
-          {/* ========================= */}
-          {/* LEFT SIDE */}
-          {/* ========================= */}
-          <div className="bg-white shadow-sm p-8 md:p-12">
-
-            <h2 className="text-3xl font-bold mb-5">
-              Get In Touch
-            </h2>
-
-            <p className="text-gray-600 leading-8 mb-10">
-              Have questions about our collections,
-              delivery, orders or collaborations?
-              Our team is always ready to help you.
-            </p>
-
-            {/* CONTACT INFO */}
-            <div className="space-y-8">
-
-              {/* PHONE */}
-              <div className="flex items-start gap-5">
-
-                <div className="w-14 h-14 bg-black text-white flex items-center justify-center text-xl">
-                  <FiPhone />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    Phone Number
-                  </h3>
-
-                  <p className="text-gray-500 mt-1">
-                    +91 98765 43210
-                  </p>
-                </div>
-
-              </div>
-
-              {/* EMAIL */}
-              <div className="flex items-start gap-5">
-
-                <div className="w-14 h-14 bg-black text-white flex items-center justify-center text-xl">
-                  <FiMail />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    Email Address
-                  </h3>
-
-                  <p className="text-gray-500 mt-1">
-                    support@luxestore.com
-                  </p>
-                </div>
-
-              </div>
-
-              {/* LOCATION */}
-              <div className="flex items-start gap-5">
-
-                <div className="w-14 h-14 bg-black text-white flex items-center justify-center text-xl">
-                  <FiMapPin />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    Location
-                  </h3>
-
-                  <p className="text-gray-500 mt-1">
-                    Ahmedabad, Gujarat, India
-                  </p>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* SOCIAL */}
-            <div className="flex items-center gap-5 mt-12">
-
-              <a
-                href="#"
-                className="w-12 h-12 border border-black flex items-center justify-center hover:bg-black hover:text-white transition"
-              >
-                <FaInstagram />
-              </a>
-
-              <a
-                href="#"
-                className="w-12 h-12 border border-black flex items-center justify-center hover:bg-black hover:text-white transition"
-              >
-                <FaWhatsapp />
-              </a>
-
-              <a
-                href="#"
-                className="w-12 h-12 border border-black flex items-center justify-center hover:bg-black hover:text-white transition"
-              >
-                <FaFacebookF />
-              </a>
-
-            </div>
-
-          </div>
-
-          {/* ========================= */}
-          {/* RIGHT SIDE */}
-          {/* ========================= */}
-          <div className="bg-white shadow-sm p-8 md:p-12">
-
-            <h2 className="text-3xl font-bold mb-5">
-              Send Message
-            </h2>
-
-            <p className="text-gray-600 mb-10">
-              Fill out the form and our team
-              will get back to you shortly.
-            </p>
-
-            {/* FORM */}
-            <form className="space-y-6">
-
-              {/* NAME */}
-              <div>
-
-                <label className="block mb-2 text-sm font-medium">
-                  Your Name
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  className="w-full border border-gray-300 px-5 py-4 outline-none focus:border-black transition"
-                />
-
-              </div>
-
-              {/* EMAIL */}
-              <div>
-
-                <label className="block mb-2 text-sm font-medium">
-                  Email Address
-                </label>
-
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full border border-gray-300 px-5 py-4 outline-none focus:border-black transition"
-                />
-
-              </div>
-
-              {/* MESSAGE */}
-              <div>
-
-                <label className="block mb-2 text-sm font-medium">
-                  Your Message
-                </label>
-
-                <textarea
-                  rows="6"
-                  placeholder="Write your message..."
-                  className="w-full border border-gray-300 px-5 py-4 outline-none focus:border-black transition resize-none"
-                ></textarea>
-
-              </div>
-
-              {/* BUTTON */}
-              <button
-                type="submit"
-                className="bg-black text-white px-8 py-4 flex items-center gap-3 hover:bg-gray-900 transition"
-              >
-                Send Message
-                <FiSend />
-              </button>
-
-            </form>
-
-          </div>
-
-        </div>
-
+    <div id="contact-page" className="max-w-5xl mx-auto px-4 py-16 space-y-12 animate-fade-in text-gray-600 font-light text-sm">
+      <div className="text-center space-y-3">
+        <span className="text-[10px] text-primary uppercase font-bold tracking-[0.25em]">Concierge desk</span>
+        <h1 className="font-display font-extrabold text-3xl sm:text-4xl text-black uppercase tracking-tight">Contact Luxe Store</h1>
+        <p className="text-xs text-gray-400 max-w-md mx-auto uppercase tracking-wider font-bold">Connect with our head tailors & support managers 24/7</p>
       </div>
 
-    </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        {/* Contact coordinates */}
+        <div className="space-y-6">
+          <h3 className="font-display font-bold text-black uppercase tracking-wide">Our Headquarters</h3>
+          <p className="text-xs sm:text-sm leading-relaxed">Visit our flagship design studio to browse master rolls, discuss sizing adjustments with our tailors, or experience fabric drape tests.</p>
+
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3.5">
+              <FiMapPin className="text-primary mt-1" size={16} />
+              <div>
+                <span className="font-bold text-gray-700 text-xs uppercase block">Atelier Address</span>
+                <p className="text-xs text-gray-500 mt-1">Luxe Atelier Plaza, DLF Emporio, Vasant Kunj, New Delhi - 110070</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3.5">
+              <FiPhone className="text-primary mt-1" size={16} />
+              <div>
+                <span className="font-bold text-gray-700 text-xs uppercase block">Concierge Hotline</span>
+                <p className="text-xs text-gray-500 mt-1">+91 98765 43210</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3.5">
+              <FiMail className="text-primary mt-1" size={16} />
+              <div>
+                <span className="font-bold text-gray-700 text-xs uppercase block">Design Office Email</span>
+                <p className="text-xs text-gray-500 mt-1">concierge@luxestore.com</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact form */}
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+          <div className="space-y-1 text-xs">
+            <label className="font-bold text-gray-700 uppercase">Patron Name</label>
+            <input
+              type="text"
+              required
+              className="w-full bg-slate-50 border border-transparent py-2.5 px-3 rounded-xl focus:outline-none focus:bg-white focus:border-primary text-xs"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1 text-xs">
+            <label className="font-bold text-gray-700 uppercase">Email Address</label>
+            <input
+              type="email"
+              required
+              className="w-full bg-slate-50 border border-transparent py-2.5 px-3 rounded-xl focus:outline-none focus:bg-white focus:border-primary text-xs"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1 text-xs">
+            <label className="font-bold text-gray-700 uppercase">Message</label>
+            <textarea
+              required
+              rows={4}
+              className="w-full bg-slate-50 border border-transparent py-2.5 px-3 rounded-xl focus:outline-none focus:bg-white focus:border-primary text-xs"
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-black hover:bg-primary text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            Submit Message Log
+          </button>
+
+          {sent && (
+            <div className="flex items-center space-x-2 text-xs text-success bg-success/5 p-2 rounded-xl animate-fade-in">
+              <FiCheckCircle size={14}/>
+              <span>Couture ticket logged! Our tailors will reply inside 1 hour.</span>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }
-
-export default Contact;

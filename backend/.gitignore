@@ -48,3 +48,6 @@ coverage/
 # Secrets
 *.pem
 *.key
+.env
+*.env
+-VISHAL.env

@@ -1,122 +1,315 @@
-const products = [
+export const mockProducts = [
   {
     id: 1,
-    productId: "1",
-    title: "Premium Hoodie",
-    price: 1499,
-    category: "men",
-    image: "https://i.pinimg.com/736x/86/6e/57/866e5760f5c444c53b840990f6bdbc93.jpg",
-    hoverImage: "https://i.pinimg.com/736x/e4/d2/a1/e4d2a198de0e3d4aa72d8426b54f3aa6.jpg",
-    description: "Premium hoodie"
+    name: "Classic Cashmere Trench Coat",
+    slug: "classic-cashmere-trench-coat",
+    brand: "Luxe Atelier",
+    category: "Women",
+    price: 14999,
+    oldPrice: 19999,
+    discount: 25,
+    rating: 4.8,
+    reviewsCount: 124,
+    inStock: true,
+    stock: 12,
+    image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Experience absolute sophistication with our Signature Trench Coat. Crafted from ultra-premium cashmere blend wool, it features a double-breasted silhouette, tailored epaulets, and an adjustable waist belt. Unmatched warmth and lightweight comfort for the modern connoisseur.",
+    specs: {
+      "Material": "80% Cashmere, 20% Merino Wool",
+      "Fit": "Tailored Fit",
+      "Care": "Dry clean only",
+      "Origin": "Imported"
+    },
+    tags: ["featured", "trending", "women"],
+    deliveryDays: 3
   },
-  
   {
     id: 2,
-    productId: "2",
-    title: "Oversized T-Shirt",
-    price: 899,
-    category: "men",
-    image: "https://i.pinimg.com/736x/22/ab/5a/22ab5ab208184482bca7e82268e57c17.jpg",
-    hoverImage: "https://i.pinimg.com/736x/d7/ac/83/d7ac83897fde1db4250081ab8c777933.jpg",
-    description: "Comfortable oversized t-shirt with luxury feel."
+    name: "Tailored Italian Leather Jacket",
+    slug: "tailored-italian-leather-jacket",
+    brand: "Veloce",
+    category: "Men",
+    price: 18999,
+    oldPrice: 24999,
+    discount: 24,
+    rating: 4.9,
+    reviewsCount: 88,
+    inStock: true,
+    stock: 7,
+    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1520975916090-3105956dac55?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "A timeless masterpiece engineered from full-grain Italian calfskin. Hand-burnished edges, custom antique brass zippers, and a quilted satin interior lining make this piece the ultimate fusion of rebellious style and luxury craftsmanship.",
+    specs: {
+      "Material": "100% Full-grain Calfskin Leather",
+      "Fit": "Slim Fit",
+      "Care": "Professional Leather Clean",
+      "Origin": "Florence, Italy"
+    },
+    tags: ["featured", "best-seller", "men"],
+    deliveryDays: 4
   },
-
   {
     id: 3,
-    productId: "3",
-    title: "Casual Shirt",
-    price: 1299,
-    category: "men",
-    image: "https://i.pinimg.com/736x/44/26/74/442674b80884cea56d7ab31b233c80a5.jpg",
-    hoverImage: "https://i.pinimg.com/1200x/8b/ab/91/8bab91219c199bd48bbb196b8cf8407d.jpg",
-    description: "Modern casual shirt for everyday styling."
+    name: "Monochrome Minimalist Sneaker",
+    slug: "monochrome-minimalist-sneaker",
+    brand: "Aero",
+    category: "Footwear",
+    price: 8499,
+    oldPrice: 11999,
+    discount: 29,
+    rating: 4.7,
+    reviewsCount: 205,
+    inStock: true,
+    stock: 25,
+    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Engineered for pure versatility. These clean, sleek low-top sneakers feature butter-soft nappa leather uppers, stitched Margom rubber cupsoles, and a cushioned memory foam footbed that molds to your stride. Perfect for dressing up or down.",
+    specs: {
+      "Material": "Premium Nappa Leather",
+      "Sole": "Margom Rubber",
+      "Fit": "True to size",
+      "Origin": "Portugal"
+    },
+    tags: ["trending", "deal", "footwear"],
+    deliveryDays: 2
   },
-
   {
     id: 4,
-    productId: "4",
-    title: "Elegant Women Dress",
-    price: 1899,
-    category: "women",
-    image: "https://i.pinimg.com/736x/0a/5e/fc/0a5efc059e5e658738933c642f942241.jpg",
-    hoverImage: "https://i.pinimg.com/736x/0a/97/44/0a97445dcca5ec1c8ceb62b19743f749.jpg",
-    description: "Stylish and elegant dress for women fashion."
+    name: "Draped Silk Evening Gown",
+    slug: "draped-silk-evening-gown",
+    brand: "Luxe Atelier",
+    category: "Women",
+    price: 15499,
+    oldPrice: 15499,
+    discount: 0,
+    rating: 4.9,
+    reviewsCount: 42,
+    inStock: true,
+    stock: 5,
+    image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Grace in movement. This fluid evening gown is crafted from premium mulberry silk satin, showcasing an elegant cowl neckline, a subtle open back, and a bias-cut skirt that flows like water.",
+    specs: {
+      "Material": "100% Mulberry Silk",
+      "Fit": "Bias cut, flowy",
+      "Care": "Dry clean only"
+    },
+    tags: ["trending", "women"],
+    deliveryDays: 3
   },
-
   {
     id: 5,
-    productId: "5",
-    title: "Kids T-Shirt Set",
-    price: 699,
-    category: "kids",
-    image: "https://i.pinimg.com/1200x/3a/d8/27/3ad827ff19dc639030610437be867cdf.jpg",
-    hoverImage: "https://i.pinimg.com/1200x/77/5f/63/775f639c2fbc0483271281821422a50d.jpg",
-    description: "Soft and comfortable clothing set for kids."
+    name: "Prestige Chronograph Gold Watch",
+    slug: "prestige-chronograph-gold-watch",
+    brand: "Vanguard",
+    category: "Accessories",
+    price: 24999,
+    oldPrice: 32000,
+    discount: 22,
+    rating: 4.9,
+    reviewsCount: 64,
+    inStock: true,
+    stock: 3,
+    image: "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "A monument of luxury horology. Features an exquisite 18k gold-plated bezel, Swiss-made quartz movement, triple sub-dials, and a scratch-resistant sapphire crystal display.",
+    specs: {
+      "Case Diameter": "42mm",
+      "Movement": "Swiss Quartz Chronograph",
+      "Water Resistance": "50m (5 ATM)"
+    },
+    tags: ["deal", "best-seller", "accessories"],
+    deliveryDays: 3
   },
-
   {
     id: 6,
-    productId: "6",
-    title: "Women Summer Top",
-    price: 799,
-    category: "women",
-    image: "https://i.pinimg.com/1200x/e2/15/5c/e2155cb69d94adac666cd84942e824a2.jpg",
-    hoverImage: "https://i.pinimg.com/1200x/04/8b/fa/048bfa96186b44a7929e7d16b6217c50.jpg",
-    description: "Soft and comfortable clothing set for women."
+    name: "Urban Explorer Utility Bomber",
+    slug: "urban-explorer-utility-bomber",
+    brand: "Veloce",
+    category: "Men",
+    price: 9499,
+    oldPrice: 12999,
+    discount: 27,
+    rating: 4.6,
+    reviewsCount: 155,
+    inStock: true,
+    stock: 14,
+    image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "A water-resistant nylon flight jacket designed with multiple secure zip pockets, signature orange lining, and ribbed collar, cuffs, and hem. Built for durability in high-street fashion environments.",
+    specs: {
+      "Material": "Heavy-duty Technical Nylon",
+      "Fit": "Relaxed Utility",
+      "Care": "Machine wash cold"
+    },
+    tags: ["trending", "men"],
+    deliveryDays: 2
   },
-
   {
     id: 7,
-    productId: "7",
-    title: "Women Casual Wear",
-    price: 899,
-    category: "women",
-    image: "https://i.pinimg.com/736x/14/d3/66/14d3666c671992a1659f05700e17a9c8.jpg",
-    hoverImage: "https://i.pinimg.com/736x/ee/c4/4b/eec44b6773646eb0c6f4fea1ec5f1949.jpg",
-    description: "Soft and comfortable clothing set for women."
+    name: "Classic Cotton Oxford Shirt",
+    slug: "classic-cotton-oxford-shirt",
+    brand: "Luxe Atelier",
+    category: "Men",
+    price: 3499,
+    oldPrice: 4999,
+    discount: 30,
+    rating: 4.5,
+    reviewsCount: 312,
+    inStock: true,
+    stock: 45,
+    image: "https://images.unsplash.com/photo-1603252109303-2751441dd157?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1603252109303-2751441dd157?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "The essential smart-casual top. Premium long-staple Egyptian cotton weave provides unparalleled breathability and robust longevity. Features a tailored collar roll and meticulous stitch finishing.",
+    specs: {
+      "Material": "100% Giza Long-staple Cotton",
+      "Fit": "Slim-regular Fit"
+    },
+    tags: ["best-seller", "men"],
+    deliveryDays: 1
   },
-
   {
     id: 8,
-    productId: "8",
-    title: "Women Stylish Outfit",
-    price: 999,
-    category: "women",
-    image: "https://i.pinimg.com/736x/a8/f3/2a/a8f32a7bc246fa91e87f7bbc3e627216.jpg",
-    hoverImage: "https://i.pinimg.com/736x/8b/bc/12/8bbc128803a8acbe0b0cad8da18b3abc.jpg",
-    description: "Soft and comfortable clothing set for women."
+    name: "Kids Fleece Hooded Sweatshirt",
+    slug: "kids-fleece-hooded-sweatshirt",
+    brand: "Aero",
+    category: "Kids",
+    price: 2499,
+    oldPrice: 3499,
+    discount: 28,
+    rating: 4.8,
+    reviewsCount: 74,
+    inStock: true,
+    stock: 22,
+    image: "https://images.unsplash.com/photo-1519457431-44ccd64a579b?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1519457431-44ccd64a579b?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Insanely soft brushed organic fleece cotton. Designed with active kids in mind, featuring double-stitched joints, non-irritating flat seams, and an adorable cozy pouch pocket.",
+    specs: {
+      "Material": "100% Certified Organic Cotton Fleece",
+      "Care": "Tumble dry low"
+    },
+    tags: ["deal", "kids"],
+    deliveryDays: 2
   },
-
   {
     id: 9,
-    productId: "9",
-    title: "Women Party Dress",
-    price: 1599,
-    category: "women",
-    image: "https://i.pinimg.com/736x/c6/28/f1/c628f1d71de47cdf5927d98e522d38c8.jpg",
-    hoverImage: "https://i.pinimg.com/736x/bf/66/21/bf66217d358e0200a06efa88c09c1489.jpg",
-    description: "Soft and comfortable clothing set for women."
+    name: "Oversized Knit Cashmere Sweater",
+    slug: "oversized-knit-cashmere-sweater",
+    brand: "Luxe Atelier",
+    category: "Women",
+    price: 7999,
+    oldPrice: 10999,
+    discount: 27,
+    rating: 4.7,
+    reviewsCount: 92,
+    inStock: true,
+    stock: 18,
+    image: "https://images.unsplash.com/photo-1574164904299-3a102b110380?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1574164904299-3a102b110380?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "An elegant oversized knit silhouette made from premium grade-A Mongolian cashmere. Extremely soft on the skin, delivering unparalleled coziness and premium warmth.",
+    specs: {
+      "Material": "100% Grade-A Cashmere",
+      "Fit": "Oversized Fit"
+    },
+    tags: ["trending", "women"],
+    deliveryDays: 3
   },
   {
     id: 10,
-    productId: "10",
-    title: "Women Casual Dress",
-    price: 1399,
-    category: "women",
-    image: "https://i.pinimg.com/736x/29/d7/75/29d775c98bb92e4a9d310dc1b0413d92.jpg",
-    hoverImage: "https://i.pinimg.com/736x/da/10/4d/da104d96e3eb36763602a376b6b71574.jpg",
-    description: "Soft and comfortable clothing set for women."
+    name: "Luxury Acetate Cat-Eye Sunglasses",
+    slug: "luxury-acetate-cat-eye-sunglasses",
+    brand: "Vanguard",
+    category: "Accessories",
+    price: 4999,
+    oldPrice: 6999,
+    discount: 28,
+    rating: 4.8,
+    reviewsCount: 110,
+    inStock: true,
+    stock: 30,
+    image: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Bold, statement eyewear crafted from robust bio-acetate with custom metal wire temples. Outfitted with high-fidelity polarization offering total UVA/UVB protection and dynamic glare reduction.",
+    specs: {
+      "Material": "Bio-acetate and Stainless Steel",
+      "Lenses": "100% Polarization UVA/B protection"
+    },
+    tags: ["best-seller", "accessories"],
+    deliveryDays: 2
   },
   {
     id: 11,
-    productId: "11",
-    title: "Kids Casual Dress",
-    price: 1399,
-    category: "kids",
-    image: "https://i.pinimg.com/1200x/54/f9/fd/54f9fd29b6aa1451413d63255386a418.jpg",
-    hoverImage: "https://i.pinimg.com/1200x/79/97/58/79975860d4279de08b218235776528d0.jpg",
-    description: "Soft and comfortable clothing set for kids."
+    name: "Smart Casual Tailored Blazer",
+    slug: "smart-casual-tailored-blazer",
+    brand: "Veloce",
+    category: "Men",
+    price: 11999,
+    oldPrice: 15999,
+    discount: 25,
+    rating: 4.6,
+    reviewsCount: 54,
+    inStock: true,
+    stock: 8,
+    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Modern soft-shoulder design featuring half-canvas construction and comfortable stretch-wool composition. Perfect for dressing up crisp jeans or pairing with classic chinos.",
+    specs: {
+      "Material": "98% Merino Wool, 2% Elastane",
+      "Lining": "100% Viscose"
+    },
+    tags: ["featured", "men"],
+    deliveryDays: 3
   },
+  {
+    id: 12,
+    name: "Organic Cotton Kids Dungarees",
+    slug: "organic-cotton-kids-dungarees",
+    brand: "Aero",
+    category: "Kids",
+    price: 3299,
+    oldPrice: 3999,
+    discount: 17,
+    rating: 4.9,
+    reviewsCount: 38,
+    inStock: true,
+    stock: 15,
+    image: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?q=80&w=600&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?q=80&w=600&auto=format&fit=crop"
+    ],
+    description: "Durable denim dungarees for kids made with ultra-soft organic stretch denim. Adjustable button shoulders and reinforced knee padding ensure absolute endurance during playtime.",
+    specs: {
+      "Material": "98% Organic Cotton, 2% Lycra",
+      "Fit": "Relaxed Play Fit"
+    },
+    tags: ["trending", "kids"],
+    deliveryDays: 2
+  }
 ];
-
-export default products;

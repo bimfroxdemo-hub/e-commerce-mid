@@ -1,0 +1,6 @@
+{
+  "name": "Luxe Store",
+  "description": "A premium modern eCommerce shopping platform inspired by Apple, Nike, and Amazon, featuring beautiful visual elements, dynamic filters, complete cart, checkout, user panel, and fully featured admin workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
