@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { mockProducts } from '../data/products';
 import { mockCategories } from '../data/categories';
 import { mockUsers } from '../data/users';
@@ -50,7 +50,6 @@ const getErrorMessage = (error, fallback = 'Something went wrong') => {
 
 const mapBackendProduct = (p, fallbackProduct = {}) => {
   const product = p?.data || p;
-
   return {
     id: product?._id || product?.id || fallbackProduct?.id || `PROD-${Date.now()}`,
     _id: product?._id || product?.id,
@@ -101,9 +100,7 @@ const mapBackendProduct = (p, fallbackProduct = {}) => {
 
 const normalizeCartProduct = (product = {}) => {
   const raw = product?.product || product?.data || product;
-
   const id = raw?._id || raw?.id || raw?.productId;
-
   if (!id) return null;
 
   const image =
@@ -116,9 +113,7 @@ const normalizeCartProduct = (product = {}) => {
 
   const images = Array.isArray(raw?.images)
     ? raw.images.map((img) => img?.url || img).filter(Boolean)
-    : image
-      ? [image]
-      : [];
+    : image ? [image] : [];
 
   const category =
     typeof raw?.category === 'object'
@@ -198,6 +193,15 @@ const DEFAULT_SITE_SETTINGS = {
 };
 
 export const AppProvider = ({ children }) => {
+  // ==============================
+  // Refs to prevent duplicate calls
+  // ==============================
+  const syncInProgress = useRef(false);
+  const userDataInProgress = useRef(false);
+  const hasSynced = useRef(false);
+  const hasUserDataFetched = useRef(false);
+  const prevAuthState = useRef(null);
+
   // ==============================
   // Database States
   // ==============================
@@ -288,7 +292,6 @@ export const AppProvider = ({ children }) => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [homeData, setHomeData] = useState(null);
 
-  // ✅ NEW: Reels State
   const [reels, setReels] = useState(() => {
     try {
       const s = localStorage.getItem('luxe_reels');
@@ -298,136 +301,92 @@ export const AppProvider = ({ children }) => {
   });
 
   // ==============================
-  // Auto-save
+  // Auto-save to localStorage
   // ==============================
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_products', JSON.stringify(products));
-    } catch {}
+    try { localStorage.setItem('luxe_products', JSON.stringify(products)); } catch {}
   }, [products]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_categories', JSON.stringify(categories));
-    } catch {}
+    try { localStorage.setItem('luxe_categories', JSON.stringify(categories)); } catch {}
   }, [categories]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_users', JSON.stringify(users));
-    } catch {}
+    try { localStorage.setItem('luxe_users', JSON.stringify(users)); } catch {}
   }, [users]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_orders', JSON.stringify(orders));
-    } catch {}
+    try { localStorage.setItem('luxe_orders', JSON.stringify(orders)); } catch {}
   }, [orders]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_cart', JSON.stringify(cart));
-    } catch {}
+    try { localStorage.setItem('luxe_cart', JSON.stringify(cart)); } catch {}
   }, [cart]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_wishlist', JSON.stringify(wishlist));
-    } catch {}
+    try { localStorage.setItem('luxe_wishlist', JSON.stringify(wishlist)); } catch {}
   }, [wishlist]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_site_settings', JSON.stringify(siteSettings));
-    } catch {}
+    try { localStorage.setItem('luxe_site_settings', JSON.stringify(siteSettings)); } catch {}
   }, [siteSettings]);
 
-  // ✅ NEW: Auto-save reels
   useEffect(() => {
-    try {
-      localStorage.setItem('luxe_reels', JSON.stringify(reels));
-    } catch {}
+    try { localStorage.setItem('luxe_reels', JSON.stringify(reels)); } catch {}
   }, [reels]);
 
   useEffect(() => {
-    const count = cart.reduce(
-      (sum, item) => sum + (Number(item.quantity) || 1),
-      0
-    );
-
+    const count = cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
     setCartCount(count);
   }, [cart]);
 
   // ==============================
   // User State Helper
   // ==============================
-  const updateUserState = (userData) => {
+  const updateUserState = useCallback((userData) => {
     if (!userData) return;
     setCurrentUser(userData);
     localStorage.setItem('luxe_user', JSON.stringify(userData));
-  };
+  }, []);
 
   // ==============================
   // Backend Health
   // ==============================
-  const checkBackendHealth = async () => {
+  const checkBackendHealth = useCallback(async () => {
     try {
       const response = await healthAPI.checkHealth();
-
       const isOnline =
         response?.status?.toLowerCase?.() === 'ok' ||
         response?.success === true;
 
-      if (isOnline) {
-        setIsBackendConnected(true);
-        return true;
-      }
-
-      setIsBackendConnected(false);
-      return false;
+      setIsBackendConnected(isOnline);
+      return isOnline;
     } catch {
       setIsBackendConnected(false);
       return false;
     }
-  };
-
-  useEffect(() => {
-    checkBackendHealth();
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated && currentUser) setIsBackendConnected(true);
-  }, [isAuthenticated, currentUser]);
-
   // ==============================
-  // Products Refresh
+  // Products / Categories / Reels Refresh
   // ==============================
-  const refreshProducts = async () => {
+  const refreshProducts = useCallback(async () => {
     try {
-      if (!isBackendConnected) return products;
-
       const prodData = await shopAPI.getProducts();
       const rawProducts = extractProductsFromResponse(prodData);
-
       if (rawProducts.length > 0) {
         const mapped = rawProducts.map((p) => mapBackendProduct(p));
         setProducts(mapped);
         return mapped;
       }
+    } catch {}
+    return [];
+  }, []);
 
-      return products;
-    } catch {
-      return products;
-    }
-  };
-
-  const refreshCategories = async () => {
+  const refreshCategories = useCallback(async () => {
     try {
-      if (!isBackendConnected) return categories;
-
       const catData = await shopAPI.getCategories();
       const raw = extractCategoriesFromResponse(catData);
-
       if (raw.length > 0) {
         const mapped = raw.map((c) => ({
           id: c._id || c.id,
@@ -436,108 +395,197 @@ export const AppProvider = ({ children }) => {
           slug: c.slug,
           description: c.description || '',
           image: c.image || '',
-          isActive: c.isActive !== undefined ? c.isActive : true
+          isActive: c.isActive !== undefined ? c.isActive : true,
+          productCount: c.productCount || 0,
         }));
-
         setCategories(mapped);
         return mapped;
       }
+    } catch {}
+    return [];
+  }, []);
 
-      return categories;
-    } catch {
-      return categories;
-    }
-  };
-
-  // ✅ NEW: Refresh Reels
-  const refreshReels = async (limit = 10) => {
+  const refreshReels = useCallback(async (limit = 10) => {
     try {
-      if (!isBackendConnected) return reels;
-
       const response = await reelsAPI.getPublic(limit);
       const fetchedReels = response?.data?.reels || response?.reels || [];
-
       if (fetchedReels.length > 0) {
         setReels(fetchedReels);
         return fetchedReels;
       }
-
-      return reels;
-    } catch {
-      return reels;
-    }
-  };
-
-  const syncBackendData = async () => {
-    try {
-      if (!isBackendConnected) return;
-
-      setIsLoading(true);
-
-      try {
-        const home = await homeAPI.getHomeData();
-        setHomeData(home);
-      } catch {}
-
-      await refreshProducts();
-      await refreshCategories();
-      await refreshReels(); // ✅ NEW
-
-      if (isAuthenticated) await fetchUserData();
-    } catch {} finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isBackendConnected) syncBackendData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBackendConnected, isAuthenticated]);
+    } catch {}
+    return [];
+  }, []);
 
   // ==============================
   // Profile Management
   // ==============================
-  const getUserProfile = async () => {
+  const getUserProfile = useCallback(async () => {
     try {
-      if (isBackendConnected && isAuthenticated) {
-        const response = await profileAPI.getProfile();
-        const userData =
-          response?.data?.user ||
-          response?.data ||
-          response?.user ||
-          null;
-
-        if (response?.success && userData) {
-          updateUserState(userData);
-          return userData;
-        }
+      const response = await profileAPI.getProfile();
+      const userData =
+        response?.data?.user || response?.data || response?.user || null;
+      if (response?.success && userData) {
+        updateUserState(userData);
+        return userData;
       }
+    } catch {}
+    return null;
+  }, [updateUserState]);
 
-      return currentUser;
-    } catch {
-      return currentUser;
-    }
-  };
+  // ==============================
+  // User Data Fetch — runs ONCE per auth session
+  // ==============================
+  const fetchUserData = useCallback(async () => {
+    if (userDataInProgress.current) return;
+    if (!localStorage.getItem('luxe_token')) return;
 
-  const updateUserProfile = async (profileData) => {
+    userDataInProgress.current = true;
+
+    try {
+      await getUserProfile();
+
+      try {
+        const d = await cartAPI.getCart();
+        const items = d?.cart?.items || d?.data?.items || [];
+        if (Array.isArray(items) && items.length > 0) {
+          setCart(
+            items.map((i) => {
+              const p = i.product || i;
+              return normalizeCartProduct({
+                ...p,
+                quantity: i.quantity || 1,
+                _id: p._id || p.id,
+                cartItemId: i._id
+              });
+            }).filter(Boolean)
+          );
+        }
+      } catch {}
+
+      try {
+        const d = await wishlistAPI.getWishlist();
+        const items = d?.wishlist?.items || d?.data?.items || [];
+        if (Array.isArray(items) && items.length > 0) {
+          setWishlist(items.map((i) => ({ id: i._id || i.id, ...i })));
+        }
+      } catch {}
+
+      try {
+        const d = await orderAPI.getMyOrders();
+        const list = d?.orders || d?.data || [];
+        if (Array.isArray(list) && list.length > 0) setOrders(list);
+      } catch {}
+
+      try {
+        const d = await reviewAPI.getMyReviews();
+        const list = d?.reviews || d?.data || [];
+        if (Array.isArray(list) && list.length > 0) setReviews(list);
+      } catch {}
+    } catch {}
+
+    // Allow re-fetch only after 30 seconds
+    setTimeout(() => {
+      userDataInProgress.current = false;
+    }, 30000);
+  }, [getUserProfile]);
+
+  // ==============================
+  // Sync Backend — runs ONCE on connect
+  // ==============================
+  const syncBackendData = useCallback(async (forceAuth = false) => {
+    if (syncInProgress.current) return;
+    syncInProgress.current = true;
+
     try {
       setIsLoading(true);
 
+      try {
+        const home = await homeAPI.getHomeData();
+        if (home) setHomeData(home);
+      } catch {}
+
+      await Promise.allSettled([
+        refreshProducts(),
+        refreshCategories(),
+        refreshReels(),
+      ]);
+
+      if (forceAuth && localStorage.getItem('luxe_token')) {
+        await fetchUserData();
+      }
+    } catch {}
+
+    setIsLoading(false);
+    syncInProgress.current = false;
+
+    // Allow re-sync only after 60 seconds
+    setTimeout(() => {
+      hasSynced.current = false;
+    }, 60000);
+  }, [refreshProducts, refreshCategories, refreshReels, fetchUserData]);
+
+  // ==============================
+  // ONE-TIME init: health check → sync
+  // ==============================
+  useEffect(() => {
+    let cancelled = false;
+
+    const init = async () => {
+      const isOnline = await checkBackendHealth();
+      if (cancelled) return;
+
+      if (isOnline && !hasSynced.current) {
+        hasSynced.current = true;
+        const hasToken = !!localStorage.getItem('luxe_token');
+        await syncBackendData(hasToken);
+      }
+    };
+
+    init();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← empty deps: runs ONCE on mount
+
+  // ==============================
+  // When auth state CHANGES (login/logout)
+  // ==============================
+  useEffect(() => {
+    const authKey = `${isAuthenticated}-${currentUser?._id || currentUser?.id || ''}`;
+
+    // Skip if same auth state as before
+    if (prevAuthState.current === authKey) return;
+    prevAuthState.current = authKey;
+
+    if (isAuthenticated && currentUser && !hasUserDataFetched.current) {
+      hasUserDataFetched.current = true;
+      setIsBackendConnected(true);
+      fetchUserData();
+    }
+
+    if (!isAuthenticated) {
+      hasUserDataFetched.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, currentUser?._id || currentUser?.id]);
+
+  // ==============================
+  // Profile Management (rest)
+  // ==============================
+  const updateUserProfile = async (profileData) => {
+    try {
+      setIsLoading(true);
       if (isBackendConnected && isAuthenticated) {
         const response = await profileAPI.updateProfile(profileData);
         const userData =
-          response?.data?.user ||
-          response?.data ||
-          response?.user ||
-          null;
-
+          response?.data?.user || response?.data || response?.user || null;
         if (response?.success && userData) {
           updateUserState(userData);
           toast.success('Profile updated!');
           return userData;
         }
       }
-
       const updatedUser = { ...currentUser, ...profileData };
       updateUserState(updatedUser);
       toast.success('Profile updated!');
@@ -553,16 +601,13 @@ export const AppProvider = ({ children }) => {
   const changeUserPassword = async (passwordData) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const r = await authAPI.changePassword(passwordData);
-
         if (r?.success) {
           toast.success('Password changed!');
           return r;
         }
       }
-
       toast.success('Password changed!');
       return { success: true };
     } catch (error) {
@@ -576,34 +621,18 @@ export const AppProvider = ({ children }) => {
   const uploadUserAvatar = async (file) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const response = await profileAPI.uploadAvatar(file);
-
         if (response?.success && response?.data) {
-          updateUserState({
-            ...currentUser,
-            avatar: response.data.avatar
-          });
-
+          updateUserState({ ...currentUser, avatar: response.data.avatar });
           toast.success('Avatar updated!');
           return response;
         }
       }
-
       const avatarUrl = URL.createObjectURL(file);
-
-      updateUserState({
-        ...currentUser,
-        avatar: avatarUrl
-      });
-
+      updateUserState({ ...currentUser, avatar: avatarUrl });
       toast.success('Avatar updated!');
-
-      return {
-        success: true,
-        data: { avatar: avatarUrl }
-      };
+      return { success: true, data: { avatar: avatarUrl } };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return { success: false };
@@ -618,43 +647,17 @@ export const AppProvider = ({ children }) => {
   const addAddress = async (addressData) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const r = await profileAPI.addAddress(addressData);
-
-        if (r?.success && r?.data) {
-          updateUserState(r.data);
-          return r;
-        }
+        if (r?.success && r?.data) { updateUserState(r.data); return r; }
       }
-
-      const newAddr = {
-        _id: Date.now().toString(),
-        ...addressData,
-        createdAt: new Date()
-      };
-
+      const newAddr = { _id: Date.now().toString(), ...addressData, createdAt: new Date() };
       let addrs = [...(currentUser?.address || []), newAddr];
-
       if (addressData.isDefault) {
-        addrs = addrs.map((a, i) => ({
-          ...a,
-          isDefault: i === addrs.length - 1
-        }));
+        addrs = addrs.map((a, i) => ({ ...a, isDefault: i === addrs.length - 1 }));
       }
-
-      updateUserState({
-        ...currentUser,
-        address: addrs
-      });
-
-      return {
-        success: true,
-        data: {
-          ...currentUser,
-          address: addrs
-        }
-      };
+      updateUserState({ ...currentUser, address: addrs });
+      return { success: true, data: { ...currentUser, address: addrs } };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return { success: false };
@@ -666,40 +669,17 @@ export const AppProvider = ({ children }) => {
   const updateAddress = async (addressId, addressData) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const r = await profileAPI.updateAddress(addressId, addressData);
-
-        if (r?.success && r?.data) {
-          updateUserState(r.data);
-          return r;
-        }
+        if (r?.success && r?.data) { updateUserState(r.data); return r; }
       }
-
-      let addrs =
-        currentUser?.address?.map((a) =>
-          a._id === addressId ? { ...a, ...addressData } : a
-        ) || [];
-
+      let addrs = currentUser?.address?.map((a) =>
+        a._id === addressId ? { ...a, ...addressData } : a) || [];
       if (addressData.isDefault) {
-        addrs = addrs.map((a) => ({
-          ...a,
-          isDefault: a._id === addressId
-        }));
+        addrs = addrs.map((a) => ({ ...a, isDefault: a._id === addressId }));
       }
-
-      updateUserState({
-        ...currentUser,
-        address: addrs
-      });
-
-      return {
-        success: true,
-        data: {
-          ...currentUser,
-          address: addrs
-        }
-      };
+      updateUserState({ ...currentUser, address: addrs });
+      return { success: true, data: { ...currentUser, address: addrs } };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return { success: false };
@@ -711,40 +691,17 @@ export const AppProvider = ({ children }) => {
   const deleteAddress = async (addressId) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const r = await profileAPI.deleteAddress(addressId);
-
-        if (r?.success && r?.data) {
-          updateUserState(r.data);
-          return r;
-        }
+        if (r?.success && r?.data) { updateUserState(r.data); return r; }
       }
-
       const toDelete = currentUser?.address?.find((a) => a._id === addressId);
-
-      let addrs =
-        currentUser?.address?.filter((a) => a._id !== addressId) || [];
-
+      let addrs = currentUser?.address?.filter((a) => a._id !== addressId) || [];
       if (toDelete?.isDefault && addrs.length > 0) {
-        addrs[0] = {
-          ...addrs[0],
-          isDefault: true
-        };
+        addrs[0] = { ...addrs[0], isDefault: true };
       }
-
-      updateUserState({
-        ...currentUser,
-        address: addrs
-      });
-
-      return {
-        success: true,
-        data: {
-          ...currentUser,
-          address: addrs
-        }
-      };
+      updateUserState({ ...currentUser, address: addrs });
+      return { success: true, data: { ...currentUser, address: addrs } };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return { success: false };
@@ -756,34 +713,15 @@ export const AppProvider = ({ children }) => {
   const setDefaultAddress = async (addressId) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
         const r = await profileAPI.setDefaultAddress(addressId);
-
-        if (r?.success && r?.data) {
-          updateUserState(r.data);
-          return r;
-        }
+        if (r?.success && r?.data) { updateUserState(r.data); return r; }
       }
-
-      const addrs =
-        currentUser?.address?.map((a) => ({
-          ...a,
-          isDefault: a._id === addressId
-        })) || [];
-
-      updateUserState({
-        ...currentUser,
-        address: addrs
-      });
-
-      return {
-        success: true,
-        data: {
-          ...currentUser,
-          address: addrs
-        }
-      };
+      const addrs = currentUser?.address?.map((a) => ({
+        ...a, isDefault: a._id === addressId
+      })) || [];
+      updateUserState({ ...currentUser, address: addrs });
+      return { success: true, data: { ...currentUser, address: addrs } };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return { success: false };
@@ -806,31 +744,19 @@ export const AppProvider = ({ children }) => {
           rating: 5.0,
           reviewsCount: 0,
           isActive: true,
-          image:
-            productData.image ||
-            'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600'
+          image: productData.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600'
         };
-
         setProducts((prev) => [localProduct, ...prev]);
         toast.success('Product added!');
-
-        return {
-          success: true,
-          data: localProduct,
-          offline: true
-        };
+        return { success: true, data: localProduct, offline: true };
       }
 
       const matched = categories.find(
-        (c) =>
-          c.name?.toLowerCase?.() === productData.category?.toLowerCase?.()
+        (c) => c.name?.toLowerCase?.() === productData.category?.toLowerCase?.()
       );
-
       const catId = matched?._id || matched?.id || null;
       const isValid = (id) => /^[0-9a-fA-F]{24}$/.test(String(id || ''));
-      const finalCat = isValid(catId)
-        ? catId
-        : productData.category || 'General';
+      const finalCat = isValid(catId) ? catId : productData.category || 'General';
 
       const tags = Array.isArray(productData.tags)
         ? productData.tags
@@ -844,49 +770,27 @@ export const AppProvider = ({ children }) => {
         price: Number(productData.price) || 0,
         salePrice: productData.oldPrice ? Number(productData.oldPrice) : null,
         category: finalCat,
-        inventory: {
-          quantity: Number(productData.stock) || 10,
-          lowStockThreshold: 5
-        },
+        inventory: { quantity: Number(productData.stock) || 10, lowStockThreshold: 5 },
         images: productData.image
-          ? [
-              {
-                url: productData.image,
-                alt: productData.name,
-                isPrimary: true
-              }
-            ]
+          ? [{ url: productData.image, alt: productData.name, isPrimary: true }]
           : [],
         tags,
         isFeatured: Boolean(productData.isFeatured)
       };
 
       const response = await adminAPI.products.create(payload);
-
       if (!response?.success) throw response;
 
       const created = response?.data?.product || response?.data || response;
-
-      const newProd = mapBackendProduct(created, {
-        ...productData,
-        category: productData.category
-      });
+      const newProd = mapBackendProduct(created, { ...productData, category: productData.category });
 
       setProducts((prev) => [newProd, ...prev]);
       toast.success('Product added!');
-
-      return {
-        success: true,
-        data: newProd
-      };
+      return { success: true, data: newProd };
     } catch (error) {
       const msg = getErrorMessage(error, 'Failed to add product');
       toast.error(msg);
-
-      return {
-        success: false,
-        message: msg
-      };
+      return { success: false, message: msg };
     } finally {
       setIsLoading(false);
     }
@@ -895,17 +799,10 @@ export const AppProvider = ({ children }) => {
   const deleteProduct = async (productId) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.products.delete(productId);
-        } catch {}
+        try { await adminAPI.products.delete(productId); } catch {}
       }
-
-      setProducts((prev) =>
-        prev.filter((p) => p.id !== productId && p._id !== productId)
-      );
-
+      setProducts((prev) => prev.filter((p) => p.id !== productId && p._id !== productId));
       toast.success('Product deleted');
       return { success: true };
     } catch (error) {
@@ -919,21 +816,14 @@ export const AppProvider = ({ children }) => {
   const updateProduct = async (productId, updateData) => {
     try {
       setIsLoading(true);
-
       setProducts((prev) =>
         prev.map((p) =>
-          p.id === productId || p._id === productId
-            ? { ...p, ...updateData }
-            : p
+          p.id === productId || p._id === productId ? { ...p, ...updateData } : p
         )
       );
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.products.update(productId, updateData);
-        } catch {}
+        try { await adminAPI.products.update(productId, updateData); } catch {}
       }
-
       return { success: true };
     } catch {
       return { success: false };
@@ -943,33 +833,18 @@ export const AppProvider = ({ children }) => {
   };
 
   // ==============================
-  // ✅ NEW: Admin Reels Management
+  // Reels Management
   // ==============================
   const getPublicReels = async (limit = 10) => {
     try {
       setIsLoading(true);
-
       const response = await reelsAPI.getPublic(limit);
       const fetchedReels = response?.data?.reels || response?.reels || [];
-
-      if (fetchedReels.length > 0) {
-        setReels(fetchedReels);
-        return {
-          success: true,
-          data: fetchedReels
-        };
-      }
-
-      return {
-        success: true,
-        data: reels
-      };
+      if (fetchedReels.length > 0) setReels(fetchedReels);
+      return { success: true, data: fetchedReels.length > 0 ? fetchedReels : reels };
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to fetch reels'));
-      return {
-        success: false,
-        data: reels
-      };
+      return { success: false, data: reels };
     } finally {
       setIsLoading(false);
     }
@@ -978,35 +853,14 @@ export const AppProvider = ({ children }) => {
   const getAdminReels = async () => {
     try {
       setIsLoading(true);
-
-      if (!isBackendConnected || !isAuthenticated) {
-        return {
-          success: true,
-          data: reels
-        };
-      }
-
+      if (!isBackendConnected || !isAuthenticated) return { success: true, data: reels };
       const response = await reelsAPI.getAdmin();
       const fetchedReels = response?.data?.reels || response?.reels || [];
-
-      if (fetchedReels.length > 0) {
-        setReels(fetchedReels);
-        return {
-          success: true,
-          data: fetchedReels
-        };
-      }
-
-      return {
-        success: true,
-        data: reels
-      };
+      if (fetchedReels.length > 0) setReels(fetchedReels);
+      return { success: true, data: fetchedReels.length > 0 ? fetchedReels : reels };
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to fetch admin reels'));
-      return {
-        success: false,
-        data: reels
-      };
+      return { success: false, data: reels };
     } finally {
       setIsLoading(false);
     }
@@ -1015,7 +869,6 @@ export const AppProvider = ({ children }) => {
   const addReel = async (reelData) => {
     try {
       setIsLoading(true);
-
       if (!isBackendConnected || !isAuthenticated) {
         const localReel = {
           _id: `REEL-${Date.now()}`,
@@ -1023,38 +876,20 @@ export const AppProvider = ({ children }) => {
           isActive: true,
           createdAt: new Date().toISOString()
         };
-
         setReels((prev) => [localReel, ...prev]);
         toast.success('Reel added locally!');
-
-        return {
-          success: true,
-          data: localReel,
-          offline: true
-        };
+        return { success: true, data: localReel, offline: true };
       }
-
       const response = await reelsAPI.create(reelData);
-
       if (!response?.success) throw response;
-
       const newReel = response?.data?.reel || response?.data || response;
-
       setReels((prev) => [newReel, ...prev]);
       toast.success('Reel added successfully!');
-
-      return {
-        success: true,
-        data: newReel
-      };
+      return { success: true, data: newReel };
     } catch (error) {
       const msg = getErrorMessage(error, 'Failed to add reel');
       toast.error(msg);
-
-      return {
-        success: false,
-        message: msg
-      };
+      return { success: false, message: msg };
     } finally {
       setIsLoading(false);
     }
@@ -1063,22 +898,12 @@ export const AppProvider = ({ children }) => {
   const updateReel = async (reelId, reelData) => {
     try {
       setIsLoading(true);
-
       setReels((prev) =>
-        prev.map((r) =>
-          r._id === reelId || r.id === reelId
-            ? { ...r, ...reelData }
-            : r
-        )
+        prev.map((r) => r._id === reelId || r.id === reelId ? { ...r, ...reelData } : r)
       );
-
       if (isBackendConnected && isAuthenticated) {
-        try {
-          await reelsAPI.update(reelId, reelData);
-          toast.success('Reel updated!');
-        } catch {}
+        try { await reelsAPI.update(reelId, reelData); toast.success('Reel updated!'); } catch {}
       }
-
       return { success: true };
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to update reel'));
@@ -1091,22 +916,12 @@ export const AppProvider = ({ children }) => {
   const toggleReel = async (reelId) => {
     try {
       setIsLoading(true);
-
       setReels((prev) =>
-        prev.map((r) =>
-          r._id === reelId || r.id === reelId
-            ? { ...r, isActive: !r.isActive }
-            : r
-        )
+        prev.map((r) => r._id === reelId || r.id === reelId ? { ...r, isActive: !r.isActive } : r)
       );
-
       if (isBackendConnected && isAuthenticated) {
-        try {
-          await reelsAPI.toggle(reelId);
-          toast.success('Reel status toggled!');
-        } catch {}
+        try { await reelsAPI.toggle(reelId); toast.success('Reel status toggled!'); } catch {}
       }
-
       return { success: true };
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to toggle reel'));
@@ -1119,17 +934,10 @@ export const AppProvider = ({ children }) => {
   const deleteReel = async (reelId) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected && isAuthenticated) {
-        try {
-          await reelsAPI.delete(reelId);
-        } catch {}
+        try { await reelsAPI.delete(reelId); } catch {}
       }
-
-      setReels((prev) =>
-        prev.filter((r) => r._id !== reelId && r.id !== reelId)
-      );
-
+      setReels((prev) => prev.filter((r) => r._id !== reelId && r.id !== reelId));
       toast.success('Reel deleted!');
       return { success: true };
     } catch (error) {
@@ -1140,28 +948,17 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ✅ Get product linked to a reel
-  const getReelProduct = (reel) => {
+  const getReelProduct = useCallback((reel) => {
     if (!reel?.productId && !reel?.product) return null;
-
     const productId = reel?.product?._id || reel?.product?.id || reel?.productId;
+    return products.find((p) => p._id === productId || p.id === productId) || null;
+  }, [products]);
 
-    const product = products.find(
-      (p) => p._id === productId || p.id === productId
-    );
-
-    return product || null;
-  };
-
-  // ✅ Get all reels for a specific product
-  const getProductReels = (productId) => {
+  const getProductReels = useCallback((productId) => {
     return reels.filter(
-      (r) =>
-        r.productId === productId ||
-        r.product?._id === productId ||
-        r.product?.id === productId
+      (r) => r.productId === productId || r.product?._id === productId || r.product?.id === productId
     );
-  };
+  }, [reels]);
 
   // ==============================
   // Admin Order/User Actions
@@ -1169,19 +966,12 @@ export const AppProvider = ({ children }) => {
   const updateOrderStatus = async (orderId, status) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.orders.updateStatus(orderId, status);
-        } catch {}
+        try { await adminAPI.orders.updateStatus(orderId, status); } catch {}
       }
-
       setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId || o._id === orderId ? { ...o, status } : o
-        )
+        prev.map((o) => o.id === orderId || o._id === orderId ? { ...o, status } : o)
       );
-
       toast.success('Order status updated');
       return { success: true };
     } catch {
@@ -1194,19 +984,11 @@ export const AppProvider = ({ children }) => {
   const assignTrackingId = async (orderId, trackingId) => {
     try {
       setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId || o._id === orderId
-            ? { ...o, trackingId }
-            : o
-        )
+        prev.map((o) => o.id === orderId || o._id === orderId ? { ...o, trackingId } : o)
       );
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.orders.sendUpdate(orderId, { trackingId });
-        } catch {}
+        try { await adminAPI.orders.sendUpdate(orderId, { trackingId }); } catch {}
       }
-
       toast.success('Tracking ID assigned');
       return { success: true };
     } catch {
@@ -1217,19 +999,12 @@ export const AppProvider = ({ children }) => {
   const changeUserRole = async (userId, role) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.users.updateRole(userId, role);
-        } catch {}
+        try { await adminAPI.users.updateRole(userId, role); } catch {}
       }
-
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId || u._id === userId ? { ...u, role } : u
-        )
+        prev.map((u) => u.id === userId || u._id === userId ? { ...u, role } : u)
       );
-
       toast.success('Role updated');
       return { success: true };
     } catch {
@@ -1242,19 +1017,12 @@ export const AppProvider = ({ children }) => {
   const changeUserStatus = async (userId, status) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.users.updateStatus(userId, status);
-        } catch {}
+        try { await adminAPI.users.updateStatus(userId, status); } catch {}
       }
-
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId || u._id === userId ? { ...u, status } : u
-        )
+        prev.map((u) => u.id === userId || u._id === userId ? { ...u, status } : u)
       );
-
       toast.success('Status updated');
       return { success: true };
     } catch {
@@ -1267,17 +1035,10 @@ export const AppProvider = ({ children }) => {
   const deleteUser = async (userId) => {
     try {
       setIsLoading(true);
-
       if (isBackendConnected) {
-        try {
-          await adminAPI.users.delete(userId);
-        } catch {}
+        try { await adminAPI.users.delete(userId); } catch {}
       }
-
-      setUsers((prev) =>
-        prev.filter((u) => u.id !== userId && u._id !== userId)
-      );
-
+      setUsers((prev) => prev.filter((u) => u.id !== userId && u._id !== userId));
       toast.success('User deleted');
       return { success: true };
     } catch {
@@ -1288,155 +1049,56 @@ export const AppProvider = ({ children }) => {
   };
 
   // ==============================
-  // User Data Fetch
-  // ==============================
-  const fetchUserData = async () => {
-    if (!isAuthenticated) return;
-
-    try {
-      await getUserProfile();
-
-      try {
-        const d = await cartAPI.getCart();
-        const items = d?.cart?.items || d?.data?.items || [];
-
-        if (Array.isArray(items)) {
-          setCart(
-            items.map((i) => {
-              const p = i.product || i;
-              return normalizeCartProduct({
-                ...p,
-                quantity: i.quantity || 1,
-                _id: p._id || p.id,
-                cartItemId: i._id
-              });
-            }).filter(Boolean)
-          );
-        }
-      } catch {}
-
-      try {
-        const d = await wishlistAPI.getWishlist();
-        const items = d?.wishlist?.items || d?.data?.items || [];
-
-        if (Array.isArray(items)) {
-          setWishlist(
-            items.map((i) => ({
-              id: i._id || i.id,
-              ...i
-            }))
-          );
-        }
-      } catch {}
-
-      try {
-        const d = await orderAPI.getMyOrders();
-        const list = d?.orders || d?.data || [];
-
-        if (Array.isArray(list)) setOrders(list);
-      } catch {}
-
-      try {
-        const d = await reviewAPI.getMyReviews();
-        const list = d?.reviews || d?.data || [];
-
-        if (Array.isArray(list)) setReviews(list);
-      } catch {}
-    } catch {}
-  };
-
-  // ==============================
   // Cart Actions
   // ==============================
   const addToCart = async (product, qty = 1) => {
     try {
       const finalProduct = normalizeCartProduct(product);
-
       if (!finalProduct) {
         toast.error('Invalid product');
-        return {
-          success: false,
-          message: 'Invalid product'
-        };
+        return { success: false, message: 'Invalid product' };
       }
-
       const finalQty = Math.max(Number(qty) || 1, 1);
-
       setCart((prev) => {
         const exists = prev.find(
-          (i) =>
-            i.id === finalProduct.id ||
-            i._id === finalProduct._id ||
-            i.id === finalProduct._id ||
-            i._id === finalProduct.id
+          (i) => i.id === finalProduct.id || i._id === finalProduct._id ||
+            i.id === finalProduct._id || i._id === finalProduct.id
         );
-
         if (exists) {
           return prev.map((i) =>
-            i.id === finalProduct.id ||
-            i._id === finalProduct._id ||
-            i.id === finalProduct._id ||
-            i._id === finalProduct.id
-              ? {
-                  ...i,
-                  quantity: (Number(i.quantity) || 1) + finalQty
-                }
+            i.id === finalProduct.id || i._id === finalProduct._id ||
+            i.id === finalProduct._id || i._id === finalProduct.id
+              ? { ...i, quantity: (Number(i.quantity) || 1) + finalQty }
               : i
           );
         }
-
-        return [
-          ...prev,
-          {
-            ...finalProduct,
-            quantity: finalQty
-          }
-        ];
+        return [...prev, { ...finalProduct, quantity: finalQty }];
       });
-
       toast.success(`${finalProduct.name} added to cart!`);
-
-      return {
-        success: true,
-        data: finalProduct
-      };
+      return { success: true, data: finalProduct };
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to add to cart'));
-
-      return {
-        success: false,
-        message: getErrorMessage(error, 'Failed to add to cart')
-      };
+      return { success: false, message: getErrorMessage(error, 'Failed to add to cart') };
     }
   };
 
   const buyNowProduct = async (product, qty = 1) => {
-    const result = await addToCart(product, qty);
-
-    return result;
+    return await addToCart(product, qty);
   };
 
   const removeFromCart = async (productId) => {
-    setCart((prev) =>
-      prev.filter((i) => i.id !== productId && i._id !== productId)
-    );
-
+    setCart((prev) => prev.filter((i) => i.id !== productId && i._id !== productId));
     toast.success('Removed from cart');
-
     return { success: true };
   };
 
   const updateCartQty = async (productId, qty) => {
     if (qty <= 0) return removeFromCart(productId);
-
     setCart((prev) =>
       prev.map((i) =>
-        i.id === productId || i._id === productId
-          ? { ...i, quantity: qty }
-          : i
+        i.id === productId || i._id === productId ? { ...i, quantity: qty } : i
       )
     );
-
     return { success: true };
   };
 
@@ -1444,39 +1106,28 @@ export const AppProvider = ({ children }) => {
     setCart([]);
     setAppliedCoupon(null);
     toast.success('Cart cleared');
-
     return { success: true };
   };
 
   // ==============================
   // Auth Actions
   // ==============================
-  const loginUser = async (userData, token) => {
+  const loginUser = useCallback(async (userData, token) => {
     updateUserState(userData);
-
     if (token) localStorage.setItem('luxe_token', token);
-
     setIsAuthenticated(true);
     setIsBackendConnected(true);
+    hasUserDataFetched.current = false; // reset so fetchUserData runs
+  }, [updateUserState]);
 
-    setTimeout(() => {
-      fetchUserData();
-      refreshProducts();
-      refreshCategories();
-      refreshReels(); // ✅ NEW
-    }, 100);
-  };
-
-  const updateCurrentUser = (userData) => {
+  const updateCurrentUser = useCallback((userData) => {
     updateUserState(userData);
-  };
+  }, [updateUserState]);
 
   const logoutUser = async () => {
     try {
       if (isBackendConnected) {
-        try {
-          await authAPI.logout();
-        } catch {}
+        try { await authAPI.logout(); } catch {}
       }
     } catch {} finally {
       setCurrentUser(null);
@@ -1484,6 +1135,10 @@ export const AppProvider = ({ children }) => {
       setCart([]);
       setWishlist([]);
       setAppliedCoupon(null);
+      hasSynced.current = false;
+      hasUserDataFetched.current = false;
+      syncInProgress.current = false;
+      userDataInProgress.current = false;
 
       localStorage.removeItem('luxe_token');
       localStorage.removeItem('luxe_user');
@@ -1491,10 +1146,7 @@ export const AppProvider = ({ children }) => {
       localStorage.removeItem('luxe_wishlist');
 
       toast.success('Logged out!');
-
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      setTimeout(() => { window.location.href = '/'; }, 500);
     }
   };
 
@@ -1503,21 +1155,12 @@ export const AppProvider = ({ children }) => {
   // ==============================
   const readNotification = (notifId) => {
     setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notifId || n._id === notifId
-          ? { ...n, read: true }
-          : n
-      )
+      prev.map((n) => n.id === notifId || n._id === notifId ? { ...n, read: true } : n)
     );
   };
 
   const clearAllNotifications = () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({
-        ...n,
-        read: true
-      }))
-    );
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   // ==============================
@@ -1525,26 +1168,17 @@ export const AppProvider = ({ children }) => {
   // ==============================
   const toggleWishlist = (product) => {
     const finalProduct = normalizeCartProduct(product) || product;
-
     setWishlist((prev) => {
       const exists = prev.find(
-        (i) =>
-          i.id === finalProduct.id ||
-          i._id === finalProduct._id ||
-          i.id === finalProduct._id ||
-          i._id === finalProduct.id
+        (i) => i.id === finalProduct.id || i._id === finalProduct._id ||
+          i.id === finalProduct._id || i._id === finalProduct.id
       );
-
       if (exists) {
         return prev.filter(
-          (i) =>
-            i.id !== finalProduct.id &&
-            i._id !== finalProduct._id &&
-            i.id !== finalProduct._id &&
-            i._id !== finalProduct.id
+          (i) => i.id !== finalProduct.id && i._id !== finalProduct._id &&
+            i.id !== finalProduct._id && i._id !== finalProduct.id
         );
       }
-
       return [...prev, { ...finalProduct }];
     });
   };
@@ -1554,65 +1188,19 @@ export const AppProvider = ({ children }) => {
   // ==============================
   const applyCouponCode = (code) => {
     const valid = [
-      {
-        code: 'LUXE15',
-        discountType: 'percent',
-        value: 15,
-        minOrder: 2000
-      },
-      {
-        code: 'FLAT500',
-        discountType: 'fixed',
-        value: 500,
-        minOrder: 3000
-      },
-      {
-        code: 'WELCOME10',
-        discountType: 'percent',
-        value: 10,
-        minOrder: 1000
-      },
-      {
-        code: 'LUXE2026',
-        discountType: 'percent',
-        value: 20,
-        minOrder: 5000
-      }
+      { code: 'LUXE15',    discountType: 'percent', value: 15,  minOrder: 2000 },
+      { code: 'FLAT500',   discountType: 'fixed',   value: 500, minOrder: 3000 },
+      { code: 'WELCOME10', discountType: 'percent', value: 10,  minOrder: 1000 },
+      { code: 'LUXE2026',  discountType: 'percent', value: 20,  minOrder: 5000 },
     ];
-
-    const coupon = valid.find(
-      (c) => c.code.toUpperCase() === code.toUpperCase()
-    );
-
-    if (!coupon) {
-      return {
-        success: false,
-        message: 'Invalid code. Try LUXE15, FLAT500, WELCOME10.'
-      };
-    }
-
-    const total = cart.reduce(
-      (a, i) =>
-        a + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-      0
-    );
-
-    if (total < coupon.minOrder) {
-      return {
-        success: false,
-        message: `Min order ₹${coupon.minOrder} required.`
-      };
-    }
-
+    const coupon = valid.find((c) => c.code.toUpperCase() === code.toUpperCase());
+    if (!coupon) return { success: false, message: 'Invalid code. Try LUXE15, FLAT500, WELCOME10.' };
+    const total = cart.reduce((a, i) => a + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+    if (total < coupon.minOrder) return { success: false, message: `Min order ₹${coupon.minOrder} required.` };
     setAppliedCoupon(coupon);
-
     return {
       success: true,
-      message: `"${coupon.code}" applied! Save ${
-        coupon.discountType === 'percent'
-          ? coupon.value + '%'
-          : '₹' + coupon.value
-      }.`
+      message: `"${coupon.code}" applied! Save ${coupon.discountType === 'percent' ? coupon.value + '%' : '₹' + coupon.value}.`
     };
   };
 
@@ -1621,14 +1209,8 @@ export const AppProvider = ({ children }) => {
   // ==============================
   const trackProductView = (product) => {
     const finalProduct = normalizeCartProduct(product) || product;
-
     setRecentlyViewed((prev) => {
-      const f = prev.filter(
-        (p) =>
-          p.id !== finalProduct.id &&
-          p._id !== finalProduct._id
-      );
-
+      const f = prev.filter((p) => p.id !== finalProduct.id && p._id !== finalProduct._id);
       return [finalProduct, ...f].slice(0, 10);
     });
   };
@@ -1637,22 +1219,14 @@ export const AppProvider = ({ children }) => {
   // Context Value
   // ==============================
   const contextValue = {
-    products,
-    setProducts,
-    categories,
-    setCategories,
-    users,
-    setUsers,
-    orders,
-    setOrders,
-    reviews,
-    setReviews,
-    coupons,
-    setCoupons,
-    notifications,
-    setNotifications,
-    reels, // ✅ NEW
-    setReels, // ✅ NEW
+    products, setProducts,
+    categories, setCategories,
+    users, setUsers,
+    orders, setOrders,
+    reviews, setReviews,
+    coupons, setCoupons,
+    notifications, setNotifications,
+    reels, setReels,
 
     currentUser,
     isAuthenticated,
@@ -1677,7 +1251,7 @@ export const AppProvider = ({ children }) => {
 
     refreshProducts,
     refreshCategories,
-    refreshReels, // ✅ NEW
+    refreshReels,
 
     addToCart,
     buyNowProduct,
@@ -1699,7 +1273,6 @@ export const AppProvider = ({ children }) => {
     deleteProduct,
     updateProduct,
 
-    // ✅ NEW: Reels Management
     getPublicReels,
     getAdminReels,
     addReel,

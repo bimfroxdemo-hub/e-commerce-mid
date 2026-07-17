@@ -28,24 +28,24 @@ export default function QuickViewModal({ product, onClose, onNavigate }) {
   };
 
   return (
-    <div id="quickview-overlay" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl relative animate-scale-in">
+    <div id="quickview-overlay" className="fixed inset-0 z-50 bg-[#1A1A3A]/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-sm sm:max-w-3xl overflow-hidden shadow-2xl relative animate-scale-in">
         
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 bg-slate-100 hover:bg-black hover:text-white rounded-full text-gray-500 transition-all cursor-pointer"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 p-2 bg-[#F8F8F8] hover:bg-[#1A1A3A] hover:text-white rounded-full text-[#333333] transition-all cursor-pointer"
         >
-          <FiX size={18} />
+          <FiX size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Product image */}
-          <div className="h-72 md:h-full relative bg-slate-50">
+          <div className="h-64 sm:h-72 md:h-full relative bg-[#F8F8F8]">
             <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-            <div className="absolute top-4 left-4">
+            <div className="absolute top-3 sm:top-4 left-3 sm:left-4">
               {product.discount > 0 && (
-                <span className="bg-secondary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+                <span className="bg-[#D4AF37] text-[#1A1A3A] text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
                   {product.discount}% OFF
                 </span>
               )}
@@ -53,46 +53,46 @@ export default function QuickViewModal({ product, onClose, onNavigate }) {
           </div>
 
           {/* Details side */}
-          <div className="p-6 md:p-8 flex flex-col justify-between space-y-4">
+          <div className="p-4 sm:p-6 md:p-8 flex flex-col justify-between space-y-3 sm:space-y-4">
             <div>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{product.brand}</p>
-              <h3 className="font-display font-bold text-xl text-black mt-1">{product.name}</h3>
+              <p className="text-[10px] sm:text-xs text-[#333333] font-bold uppercase tracking-wider">{product.brand || 'Kabiraaz Fashion'}</p>
+              <h3 className="font-display font-bold text-lg sm:text-xl text-[#1A1A3A] mt-1">{product.name}</h3>
 
               {/* Rating */}
               <div className="flex items-center space-x-2 mt-2">
                 <div className="flex items-center space-x-1">
-                  <FiStar size={14}className="text-amber-400 fill-amber-400" />
-                  <span className="text-sm font-bold text-gray-800">{product.rating}</span>
+                  <FiStar size={12} className="sm:w-[14px] sm:h-[14px] text-[#D4AF37] fill-[#D4AF37]" />
+                  <span className="text-xs sm:text-sm font-bold text-[#1A1A3A]">{product.rating}</span>
                 </div>
-                <span className="text-gray-300">|</span>
-                <span className="text-xs text-gray-400 font-medium">{product.reviewsCount} Boutique Reviews</span>
+                <span className="text-[#E0E0E0]">|</span>
+                <span className="text-[10px] sm:text-xs text-[#333333] font-medium">{product.reviewsCount} Fashion Reviews</span>
               </div>
 
               {/* Pricing */}
-              <div className="flex items-baseline space-x-3 mt-4">
-                <span className="text-2xl font-bold text-black">₹{product.price.toLocaleString()}</span>
+              <div className="flex items-baseline space-x-3 mt-3 sm:mt-4">
+                <span className="text-xl sm:text-2xl font-bold text-[#1A1A3A]">₹{product.price.toLocaleString()}</span>
                 {product.oldPrice > product.price && (
-                  <span className="text-sm text-gray-400 line-through">₹{product.oldPrice.toLocaleString()}</span>
+                  <span className="text-sm text-[#333333] line-through">₹{product.oldPrice.toLocaleString()}</span>
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-xs text-gray-500 leading-relaxed mt-4">
-                {product.description.slice(0, 150)}...
+              <p className="text-xs text-[#333333] leading-relaxed mt-3 sm:mt-4">
+                {product.description?.slice(0, 150) || "Premium quality fashion item with excellent craftsmanship and attention to detail"}...
               </p>
 
               {/* Sizes (Dynamic Mock) */}
-              <div className="mt-5 space-y-2">
-                <span className="text-xs font-bold text-gray-700 block uppercase tracking-wider">Select Size</span>
+              <div className="mt-4 sm:mt-5 space-y-2">
+                <span className="text-[10px] sm:text-xs font-bold text-[#1A1A3A] block uppercase tracking-wider">Select Size</span>
                 <div className="flex space-x-2">
                   {["S", "M", "L", "XL"].map((sz) => (
                     <button
                       key={sz}
                       onClick={() => setSelectedSize(sz)}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold border transition-all cursor-pointer ${
                         selectedSize === sz
-                          ? 'bg-black text-white border-black scale-105'
-                          : 'border-gray-200 text-gray-600 hover:border-black'
+                          ? 'bg-[#1A1A3A] text-white border-[#1A1A3A] scale-105'
+                          : 'border-[#E0E0E0] text-[#333333] hover:border-[#007A8A] hover:text-[#007A8A]'
                       }`}
                     >
                       {sz}
@@ -102,19 +102,19 @@ export default function QuickViewModal({ product, onClose, onNavigate }) {
               </div>
 
               {/* Quantity */}
-              <div className="mt-5 space-y-2">
-                <span className="text-xs font-bold text-gray-700 block uppercase tracking-wider">Quantity</span>
+              <div className="mt-4 sm:mt-5 space-y-2">
+                <span className="text-[10px] sm:text-xs font-bold text-[#1A1A3A] block uppercase tracking-wider">Quantity</span>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-slate-50 cursor-pointer"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[#E0E0E0] flex items-center justify-center hover:bg-[#F8F8F8] hover:border-[#007A8A] text-[#333333] hover:text-[#007A8A] cursor-pointer transition-all text-sm"
                   >
                     -
                   </button>
-                  <span className="font-bold text-sm w-4 text-center">{qty}</span>
+                  <span className="font-bold text-sm w-4 text-center text-[#1A1A3A]">{qty}</span>
                   <button
                     onClick={() => setQty(qty + 1)}
-                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-slate-50 cursor-pointer"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[#E0E0E0] flex items-center justify-center hover:bg-[#F8F8F8] hover:border-[#007A8A] text-[#333333] hover:text-[#007A8A] cursor-pointer transition-all text-sm"
                   >
                     +
                   </button>
@@ -123,34 +123,34 @@ export default function QuickViewModal({ product, onClose, onNavigate }) {
             </div>
 
             {/* Actions */}
-            <div className="space-y-2 pt-4 border-t border-gray-100">
+            <div className="space-y-2 pt-3 sm:pt-4 border-t border-[#E0E0E0]">
               <div className="flex space-x-2">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-black hover:bg-primary text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center space-x-2"
+                  className="flex-1 bg-[#D4AF37] hover:bg-[#B8941F] text-[#1A1A3A] py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center space-x-2"
                 >
-                  <FiShoppingBag size={14}/>
+                  <FiShoppingBag size={12} className="sm:w-[14px] sm:h-[14px]"/>
                   <span>Add To Bag</span>
                 </button>
                 <button
                   onClick={handleWishlist}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                  className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl border transition-all cursor-pointer ${
                     isWishlisted 
-                      ? 'bg-danger/15 border-danger/20 text-danger' 
-                      : 'border-gray-200 text-gray-400 hover:text-danger hover:border-danger/30'
+                      ? 'bg-[#D4AF37]/15 border-[#D4AF37]/20 text-[#D4AF37]' 
+                      : 'border-[#E0E0E0] text-[#333333] hover:text-[#D4AF37] hover:border-[#D4AF37]/30'
                   }`}
                   title="Wishlist"
                 >
-                  <FiHeart size={16} className={isWishlisted ? 'fill-current' : ''} />
+                  <FiHeart size={14} className={`sm:w-4 sm:h-4 ${isWishlisted ? 'fill-current' : ''}`} />
                 </button>
               </div>
 
               <button
                 onClick={() => { onNavigate('product-details', { slug: product.slug }); onClose(); }}
-                className="w-full text-center text-[11px] font-bold text-gray-400 hover:text-primary transition-colors py-2 flex items-center justify-center space-x-1"
+                className="w-full text-center text-[10px] sm:text-[11px] font-bold text-[#333333] hover:text-[#007A8A] transition-colors py-2 flex items-center justify-center space-x-1"
               >
-                <span>View Full Atelier Product Specifications</span>
-                <FiChevronRight size={12} />
+                <span>View Full Fashion Product Specifications</span>
+                <FiChevronRight size={10} className="sm:w-3 sm:h-3" />
               </button>
             </div>
 

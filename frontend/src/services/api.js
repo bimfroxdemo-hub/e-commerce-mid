@@ -546,24 +546,49 @@ export const profileAPI = {
 // Public route: /api/reels
 // Admin route:  /api/admin/reels
 // ==============================
+// ==============================
+// SECTION 11: INSTAGRAM REELS API
+// ==============================
 export const reelsAPI = {
-  getPublic: (limit = 5) => 
-    apiClient.get(`/reels?limit=${limit}`),
-  
-  getAdmin: () => 
-    apiClient.get('/admin/reels'),
-  
-  create: (data) => 
-    apiClient.post('/admin/reels', data),
-  
-  update: (id, data) => 
-    apiClient.put(`/admin/reels/${id}`, data),
-  
-  remove: (id) => 
-    apiClient.delete(`/admin/reels/${id}`),
-  
-  toggle: (id) => 
-    apiClient.patch(`/admin/reels/${id}/toggle`)
+  getPublic: async (limit = 5) =>
+    request({
+      method: "get",
+      url: `/reels?limit=${limit}`,
+      timeout: 8000, // ⚡ Fail fast on public route
+    }),
+
+  getAdmin: async () =>
+    request({
+      method: "get",
+      url: "/admin/reels",
+      timeout: 15000,
+    }),
+
+  create: async (data) =>
+    request({
+      method: "post",
+      url: "/admin/reels",
+      data,
+    }),
+
+  update: async (id, data) =>
+    request({
+      method: "put",
+      url: `/admin/reels/${id}`,
+      data,
+    }),
+
+  remove: async (id) =>
+    request({
+      method: "delete",
+      url: `/admin/reels/${id}`,
+    }),
+
+  toggle: async (id) =>
+    request({
+      method: "patch",
+      url: `/admin/reels/${id}/toggle`,
+    }),
 };
 
 // ==============================

@@ -25,7 +25,7 @@ export default function BulkUploadCSV() {
           12000,
           15,
           "Women",
-          "Luxe Atelier",
+          "Kabiraaz Fashion",
           "Elegant fluid tailored pleated dress.",
           "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400",
           "dress, winter, elegant"
@@ -37,7 +37,7 @@ export default function BulkUploadCSV() {
           9000,
           4,
           "Accessories",
-          "Luxe Atelier",
+          "Kabiraaz Fashion",
           "Woven meticulously from high-grade Himalayan cashmere.",
           "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=400",
           "scarf, winter, warm"
@@ -63,7 +63,7 @@ export default function BulkUploadCSV() {
       XLSX.utils.book_append_sheet(wb, ws, "SKU Catalog");
 
       // Write genuine excel spreadsheet output
-      XLSX.writeFile(wb, "luxe_atelier_inventory_template.xlsx");
+      XLSX.writeFile(wb, "kabiraaz_fashion_inventory_template.xlsx");
       toast.success("Excel template downloaded successfully (.xlsx format).");
     } catch (err) {
       console.error("Failed to generate Excel template", err);
@@ -126,8 +126,8 @@ export default function BulkUploadCSV() {
             const price = priceIdx !== -1 && !isNaN(Number(row[priceIdx])) ? Number(row[priceIdx]) : 2999;
             const oldPrice = oldPriceIdx !== -1 && !isNaN(Number(row[oldPriceIdx])) ? Number(row[oldPriceIdx]) : Math.round(price * 1.3);
             const quantity = qtyIdx !== -1 && row[qtyIdx] !== undefined && !isNaN(Number(row[qtyIdx])) ? Number(row[qtyIdx]) : 15;
-            const category = categoryIdx !== -1 && row[categoryIdx] !== undefined ? String(row[categoryIdx]).trim() : "Women";
-            const brand = brandIdx !== -1 && row[brandIdx] !== undefined ? String(row[brandIdx]).trim() : "Luxe Atelier";
+            const category = categoryIdx !== -1 && row[categoryIdx] !== undefined ? String(row[categoryIdx]).trim() : "Fashion";
+            const brand = brandIdx !== -1 && row[brandIdx] !== undefined ? String(row[brandIdx]).trim() : "Kabiraaz Fashion";
             const description = descIdx !== -1 && row[descIdx] !== undefined ? String(row[descIdx]).trim() : "Premium artisan design garment.";
             const image = imgIdx !== -1 && row[imgIdx] !== undefined ? String(row[imgIdx]).trim() : "";
             const tagsStr = tagsIdx !== -1 && row[tagsIdx] !== undefined ? String(row[tagsIdx]).trim() : "";
@@ -185,10 +185,10 @@ export default function BulkUploadCSV() {
     const triggerSimulationFallback = () => {
       setTimeout(() => {
         const mockReport = [
-          { id: 1, name: "Premium Trench Coat", sku: "LUXE-TC-101", brand: "Luxe Atelier", category: "Women", price: 12500, oldPrice: 16250, stock: 12, quantity: 12, description: "Imported classic outerwear.", status: "PASS", message: "Excel Row 1 verified successfully. Columns aligned." },
-          { id: 2, name: "Hand-Burnished Leather Belt", sku: "LUXE-BT-202", brand: "Vanguard", category: "Men", price: 4200, oldPrice: 5460, stock: 3, quantity: 3, description: "Genuine leather belt.", status: "WARN", message: "Excel Row 2 warning: Stock is low (3 items remaining)." },
-          { id: 3, name: "Luxury Gold Chronograph", sku: "LUXE-WC-505", brand: "Aero", category: "Accessories", price: 45000, oldPrice: 58500, stock: 8, quantity: 8, description: "Exclusive custom timepiece.", status: "PASS", message: "Excel Row 3 verified successfully. Image URL matches." },
-          { id: 4, name: "Merino Wool Pullover", sku: "LUXE-WP-010", brand: "Luxe Atelier", category: "Men", price: 9500, oldPrice: 12350, stock: 0, quantity: 0, description: "Woven merino pullover.", status: "WARN", message: "Excel Row 4 warning: Stock is 0 (Listed as Out of Stock)." }
+          { id: 1, name: "Premium Trench Coat", sku: "KABIRAAZ-TC-101", brand: "Kabiraaz Fashion", category: "Women", price: 12500, oldPrice: 16250, stock: 12, quantity: 12, description: "Imported classic outerwear.", status: "PASS", message: "Excel Row 1 verified successfully. Columns aligned." },
+          { id: 2, name: "Hand-Burnished Leather Belt", sku: "KABIRAAZ-BT-202", brand: "Vanguard", category: "Men", price: 4200, oldPrice: 5460, stock: 3, quantity: 3, description: "Genuine leather belt.", status: "WARN", message: "Excel Row 2 warning: Stock is low (3 items remaining)." },
+          { id: 3, name: "Luxury Gold Chronograph", sku: "KABIRAAZ-WC-505", brand: "Aero", category: "Accessories", price: 45000, oldPrice: 58500, stock: 8, quantity: 8, description: "Exclusive custom timepiece.", status: "PASS", message: "Excel Row 3 verified successfully. Image URL matches." },
+          { id: 4, name: "Merino Wool Pullover", sku: "KABIRAAZ-WP-010", brand: "Kabiraaz Fashion", category: "Men", price: 9500, oldPrice: 12350, stock: 0, quantity: 0, description: "Woven merino pullover.", status: "WARN", message: "Excel Row 4 warning: Stock is 0 (Listed as Out of Stock)." }
         ];
         setValidationReport(mockReport);
         setIsUploading(false);
@@ -221,7 +221,7 @@ export default function BulkUploadCSV() {
         const result = await addProduct({
           name: row.name,
           sku: row.sku,
-          brand: row.brand || "Luxe Atelier",
+          brand: row.brand || "Kabiraaz Fashion",
           category: row.category,
           price: Number(row.price),
           oldPrice: row.oldPrice || Math.round(row.price * 1.3),
@@ -251,46 +251,58 @@ export default function BulkUploadCSV() {
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      {/* Download Action block */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-50 p-3.5 rounded-xl border border-gray-100 gap-3">
-        <div className="flex items-start space-x-3">
-          <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 mt-0.5">
-            <FileSpreadsheet size={16} />
-          </div>
+      {/* ═══════════════ HEADER SECTION - Updated Brand Colors */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1A1A3A] via-[#1A1A3A] to-[#2E3192] shadow-lg p-6">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37] opacity-10 blur-3xl pointer-events-none transform translate-x-1/2 -translate-y-1/2"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h4 className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Download Microsoft Excel Template</h4>
-            <p className="text-[10px] text-gray-400 mt-0.5 max-w-md">Retrieve the standard structured Excel worksheet (.xlsx) prepared with correct header formatting for flawless uploads.</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
+              <Layers size={24} className="text-[#D4AF37]" />
+              CSV & Bulk Import Manager
+            </h2>
+            <p className="text-gray-300 mt-2 text-sm max-w-2xl leading-relaxed">
+              Effortlessly sync inventory via standardized spreadsheets. Supports `.xlsx`, `.xls`, and `.csv` formats with automatic schema mapping.
+            </p>
           </div>
+          
+          <button
+            onClick={handleDownloadExcelTemplate}
+            className="inline-flex items-center gap-2 bg-[#D4AF37] hover:bg-[#B8941F] text-[#1A1A3A] px-5 py-3 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wide transition-colors shadow-md active:scale-95 whitespace-nowrap"
+          >
+            <Download size={16} />
+            <span>Download Template</span>
+          </button>
         </div>
-        <button
-          onClick={handleDownloadExcelTemplate}
-          className="bg-white border border-gray-200 hover:border-black text-gray-800 text-[10px] font-extrabold uppercase tracking-widest py-2 px-3.5 rounded-lg flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap shadow-3xs"
-        >
-          <Download size={12} />
-          <span>Download Template (.xlsx)</span>
-        </button>
       </div>
 
       {/* Upload Spreadsheet Box */}
-      <div className="space-y-2">
-        <h4 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-widest flex items-center space-x-2">
-          <span>Upload Excel Spreadsheet File</span>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-bold text-[#1A1A3A] uppercase tracking-wider">Upload Inventory File</h4>
           {isBackendConnected && (
-            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-emerald-100">Live Sync Enabled</span>
+            <span className="hidden sm:inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200">
+              Live Sync Enabled
+            </span>
           )}
-        </h4>
-        <div className="border border-dashed border-gray-200 hover:border-indigo-400 rounded-xl p-6 text-center space-y-3 bg-slate-50/20 hover:bg-slate-50/50 transition-all duration-300">
-          <div className="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-            <Upload size={18} />
+        </div>
+        
+        <div className="border-2 border-dashed border-[#E0E0E0] hover:border-[#007A8A] hover:bg-[#F8F8F8]/50 rounded-xl p-6 text-center space-y-4 bg-white transition-all duration-300 relative group">
+          <div className="w-12 h-12 mx-auto rounded-full bg-[#F8F8F8] group-hover:bg-[#D4AF37]/10 flex items-center justify-center text-[#1A1A3A] group-hover:text-[#D4AF37] transition-colors">
+            <Upload size={22} className="group-hover:scale-110 transition-transform" />
           </div>
+          
           <div className="space-y-1">
-            <p className="text-[11px] text-gray-700 font-extrabold uppercase tracking-wider">Select Excel Spreadsheet Catalog</p>
-            <p className="text-[9px] text-gray-400 max-w-sm mx-auto">Upload standard .xlsx, .xls or parsed SKU lists. The system auto-matches headers like Name, SKU, Price, and Quantity.</p>
+            <p className="text-[13px] text-[#1A1A3A] font-extrabold uppercase tracking-wide">Select File to Upload</p>
+            <p className="text-[11px] text-[#333333] max-w-md mx-auto opacity-80">
+              Drag & drop your CSV or Excel file here. System supports Name, SKU, Price, Category, and Tags columns.
+            </p>
           </div>
+          
           <div className="flex justify-center pt-1">
-            <label className="bg-black hover:bg-slate-800 text-white text-[9px] font-extrabold uppercase tracking-widest px-4 py-2.5 rounded-lg cursor-pointer transition-all shadow-xs hover:shadow-sm">
+            <label className="bg-[#1A1A3A] hover:bg-[#2E3192] text-white text-[11px] font-bold uppercase tracking-widest px-6 py-2.5 rounded-lg cursor-pointer transition-all shadow-sm hover:shadow-md active:scale-95 whitespace-nowrap">
               Choose Excel File
               <input
                 type="file"
@@ -300,10 +312,11 @@ export default function BulkUploadCSV() {
               />
             </label>
           </div>
+          
           {selectedFile && (
-            <div className="inline-flex items-center space-x-2 bg-white border border-gray-100 py-1 px-3.5 rounded-lg shadow-3xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
-              <p className="text-[10px] font-mono text-gray-600">
+            <div className="inline-flex items-center space-x-2 bg-[#F8F8F8] border border-[#E0E0E0] py-2 px-4 rounded-lg shadow-sm animate-fade-in-up">
+              <div className="w-2 h-2 rounded-full bg-[#007A8A] animate-pulse"></div>
+              <p className="text-[10px] font-mono text-[#1A1A3A] truncate max-w-[200px]">
                 {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
               </p>
             </div>
@@ -313,59 +326,66 @@ export default function BulkUploadCSV() {
 
       {/* Loading Spin */}
       {isUploading && (
-        <div className="text-center py-4 space-y-1.5">
-          <RefreshCw className="mx-auto animate-spin text-indigo-500" size={16} />
-          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-wider">Parsing workbook worksheets. Matching inventory controllers schemas...</p>
+        <div className="flex flex-col items-center justify-center py-6 space-y-2 bg-[#F8F8F8] rounded-xl border border-[#E0E0E0]">
+          <RefreshCw className="animate-spin text-[#007A8A]" size={24} />
+          <p className="text-[11px] font-bold text-[#333333] uppercase tracking-wider">Parsing Workbook & Validating Data...</p>
         </div>
       )}
 
       {/* Diagnostics Report Grid */}
       {validationReport && !isUploading && (
-        <div className="space-y-3 border border-gray-100 p-4 rounded-xl bg-white animate-fade-in shadow-3xs">
-          <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl overflow-hidden shadow-sm animate-fade-in-up">
+          <div className="p-4 sm:p-6 border-b border-[#E0E0E0] bg-[#F8F8F8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h4 className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Parsed Spreadsheet Diagnostic Output</h4>
-              <p className="text-[9px] text-gray-400 mt-0.5">Found {validationReport.length} valid rows. Detected {validationReport.filter(r => r.status === 'WARN').length} warnings.</p>
+              <h4 className="text-sm font-bold text-[#1A1A3A] uppercase tracking-wide">Parsed Spreadsheet Diagnostic Output</h4>
+              <p className="text-xs text-[#333333] mt-1 opacity-80">
+                Found <span className="font-bold">{validationReport.length}</span> valid rows. Detected <span className="font-bold text-[#007A8A]">{validationReport.filter(r => r.status === 'WARN').length}</span> warnings.
+              </p>
             </div>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full flex items-center space-x-1">
-              <CheckSquare size={9} />
-              <span>Format Aligned</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#007A8A] bg-[#007A8A]/10 border border-[#007A8A]/20 px-3 py-1 rounded-full flex items-center space-x-1.5">
+              <CheckSquare size={12} />
+              <span>Data Aligned</span>
             </span>
           </div>
 
-          <div className="overflow-x-auto max-h-56 overflow-y-auto">
-            <table className="w-full text-left border-collapse text-[10px]">
-              <thead>
-                <tr className="bg-slate-50 text-gray-500 font-extrabold uppercase border-b border-gray-100 text-[8px] tracking-wider sticky top-0">
-                  <th className="p-2.5 text-center">Row</th>
-                  <th className="p-2.5">Design Name</th>
-                  <th className="p-2.5">SKU</th>
-                  <th className="p-2.5">Category</th>
-                  <th className="p-2.5 text-right">Price</th>
-                  <th className="p-2.5 text-center">Stock</th>
-                  <th className="p-2.5">Status</th>
-                  <th className="p-2.5">Diagnostics</th>
+          {/* Mobile/Table Responsive Container */}
+          <div className="overflow-x-auto max-h-96">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead className="bg-[#1A1A3A] text-white sticky top-0 z-10">
+                <tr className="text-[10px] uppercase tracking-widest font-semibold text-gray-300">
+                  <th className="p-3 text-center">ID</th>
+                  <th className="p-3 text-left">Design Name</th>
+                  <th className="p-3">SKU</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3 text-right">Price (₹)</th>
+                  <th className="p-3 text-center">Stock</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 hidden sm:table-cell">Diagnostics</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 font-mono text-gray-600">
+              <tbody className="divide-y divide-[#E0E0E0] font-mono text-xs">
                 {validationReport.map((rep) => (
-                  <tr key={rep.id} className="hover:bg-slate-50/40">
-                    <td className="p-2.5 text-center font-bold text-gray-400">{rep.id}</td>
-                    <td className="p-2.5 font-sans font-medium text-black">{rep.name}</td>
-                    <td className="p-2.5 text-indigo-600 font-semibold">{rep.sku}</td>
-                    <td className="p-2.5 font-sans">{rep.category}</td>
-                    <td className="p-2.5 text-right text-black font-bold">₹{rep.price.toLocaleString()}</td>
-                    <td className="p-2.5 text-center font-semibold">{rep.stock}</td>
-                    <td className="p-2.5">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider ${rep.status === 'PASS'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          : 'bg-amber-50 text-amber-700 border border-amber-100'
+                  <tr key={rep.id} className="hover:bg-[#F8F8F8]/80 transition-colors">
+                    <td className="p-3 text-center font-bold text-[#1A1A3A] bg-[#F8F8F8]">{rep.id}</td>
+                    <td className="p-3 font-sans font-medium text-[#1A1A3A]">{rep.name}</td>
+                    <td className="p-3 text-[#007A8A] font-semibold text-[10px] tracking-tight">{rep.sku}</td>
+                    <td className="p-3 font-sans text-[#1A1A3A]">{rep.category}</td>
+                    <td className="p-3 text-right font-bold text-[#1A1A3A]">₹{rep.price.toLocaleString()}</td>
+                    <td className="p-3 text-center font-semibold">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${rep.stock === 0 ? 'bg-red-100 text-red-700' : rep.stock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                        {rep.stock}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${rep.status === 'PASS'
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          : 'bg-[#1A1A3A] text-white border border-[#1A1A3A]'
                         }`}>
-                        {rep.status === 'PASS' ? <Check size={7} className="mr-0.5" /> : <AlertTriangle size={7} className="mr-0.5" />}
+                        {rep.status === 'PASS' ? <Check size={10} className="mr-1" /> : <AlertTriangle size={10} className="mr-1" />}
                         {rep.status}
                       </span>
                     </td>
-                    <td className="p-2.5 font-sans text-gray-400 text-[9px] leading-relaxed max-w-xs truncate" title={rep.message}>
+                    <td className="p-3 font-sans text-[#333333] text-[10px] leading-relaxed max-w-xs truncate hidden sm:table-cell" title={rep.message}>
                       {rep.message}
                     </td>
                   </tr>
@@ -374,17 +394,17 @@ export default function BulkUploadCSV() {
             </table>
           </div>
 
-          <div className="pt-2 border-t border-gray-100 flex justify-end">
+          <div className="p-4 sm:p-6 border-t border-[#E0E0E0] bg-white flex flex-col sm:flex-row justify-end items-center gap-3">
             <button
               disabled={isImportCommitted}
               onClick={handleCommitBulkImport}
-              className={`text-[9px] font-extrabold uppercase tracking-widest py-2.5 px-4 rounded-lg transition-all flex items-center space-x-1.5 ${isImportCommitted
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-black hover:bg-slate-800 text-white shadow-3xs cursor-pointer active:scale-95'
+              className={`text-[10px] sm:text-xs font-extrabold uppercase tracking-widest py-2.5 px-6 rounded-lg transition-all flex items-center space-x-1.5 ${isImportCommitted
+                  ? 'bg-[#E0E0E0] text-[#333333] cursor-not-allowed'
+                  : 'bg-[#1A1A3A] hover:bg-[#2E3192] text-white shadow-lg hover:shadow-xl cursor-pointer active:scale-95'
                 }`}
             >
-              <CheckCircle2 size={11} />
-              <span>{isImportCommitted ? "Import Synced Perfect" : "Commit Verified Records"}</span>
+              <CheckCircle2 size={14} />
+              <span>{isImportCommitted ? "Import Complete" : "Commit Verified Records"}</span>
             </button>
           </div>
         </div>

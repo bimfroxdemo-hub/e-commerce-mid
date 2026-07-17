@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { FiCheckCircle, FiShield, FiTruck, FiArrowLeft, FiTag, FiUser, FiPhone, FiMapPin, FiGlobe, FiCreditCard, FiSmartphone, FiSend, FiBox, FiHeart, FiPlus, FiEdit2 } from 'react-icons/fi';
+import {
+  FiCheckCircle,
+  FiShield,
+  FiArrowLeft,
+  FiTag,
+  FiUser,
+  FiPhone,
+  FiMapPin,
+  FiCreditCard,
+  FiSmartphone,
+  FiSend,
+  FiBox,
+  FiHeart,
+  FiPlus,
+  FiEdit2,
+} from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 export default function Checkout({ onNavigate }) {
   const { cart, appliedCoupon, clearCart, currentUser, setOrders } = useApp();
 
-  // ✅ Saved addresses from user profile
   const savedAddresses = currentUser?.address || [];
 
-  // ✅ Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [useNewAddress, setUseNewAddress] = useState(savedAddresses.length === 0);
 
@@ -22,10 +35,11 @@ export default function Checkout({ onNavigate }) {
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [orderSuccessId, setOrderSuccessId] = useState(null);
 
-  // ✅ Auto-select default address on mount
   useEffect(() => {
     if (savedAddresses.length > 0) {
-      const defaultAddr = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
+      const defaultAddr =
+        savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+
       if (defaultAddr) {
         setSelectedAddressId(defaultAddr._id);
         setFullName(defaultAddr.fullName || currentUser?.name || "");
@@ -38,7 +52,6 @@ export default function Checkout({ onNavigate }) {
     }
   }, []);
 
-  // ✅ Handle address selection
   const handleSelectAddress = (addr) => {
     setSelectedAddressId(addr._id);
     setUseNewAddress(false);
@@ -50,7 +63,6 @@ export default function Checkout({ onNavigate }) {
     setPincode(addr.pincode || "");
   };
 
-  // ✅ Handle "Use New Address"
   const handleUseNewAddress = () => {
     setSelectedAddressId(null);
     setUseNewAddress(true);
@@ -62,26 +74,73 @@ export default function Checkout({ onNavigate }) {
     setPincode("");
   };
 
-  const cartSubtotal = cart.reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+  const cartSubtotal = cart.reduce(
+    (acc, item) =>
+      acc +
+      (Number(item.price) || 0) * (Number(item.quantity) || 1),
+    0
+  );
+
   let discountAmount = 0;
+
   if (appliedCoupon) {
-    if (appliedCoupon.discountType === "fixed") discountAmount = appliedCoupon.value;
-    else if (appliedCoupon.discountType === "percent") discountAmount = Math.round((cartSubtotal * appliedCoupon.value) / 100);
+    if (appliedCoupon.discountType === "fixed") {
+      discountAmount = appliedCoupon.value;
+    } else if (appliedCoupon.discountType === "percent") {
+      discountAmount = Math.round(
+        (cartSubtotal * appliedCoupon.value) / 100
+      );
+    }
   }
+
   const finalTotal = Math.max(0, cartSubtotal - discountAmount);
 
   const handlePlaceOrder = (e) => {
     e.preventDefault();
-    if (!fullName || !phone || !street || !city || !pincode) { toast.error("Please fill all shipping details."); return; }
 
-    const newOrderId = "LUX-" + Math.floor(10000 + Math.random() * 90000);
+    if (!fullName || !phone || !street || !city || !pincode) {
+      toast.error("Please fill all shipping details.");
+      return;
+    }
+
+    const newOrderId =
+      "LUX-" + Math.floor(10000 + Math.random() * 90000);
+
     const newOrderObj = {
-      id: newOrderId, userId: currentUser?.id || 101, date: new Date().toISOString().split('T')[0],
-      items: [...cart], subtotal: cartSubtotal, discount: discountAmount, shipping: 0, total: finalTotal,
-      paymentMethod: paymentMethod === 'upi' ? 'UPI' : paymentMethod === 'card' ? 'Credit Card' : 'COD',
-      shippingAddress: { fullName, street, city, state: stateName, zipCode: pincode, phone },
-      status: "Ordered", trackingId: "",
-      timeline: [{ title: "Order Placed", time: new Date().toLocaleTimeString(), active: true }, { title: "Confirmed", time: "", active: false }, { title: "Shipped", time: "", active: false }, { title: "Delivered", time: "", active: false }]
+      id: newOrderId,
+      userId: currentUser?.id || 101,
+      date: new Date().toISOString().split("T")[0],
+      items: [...cart],
+      subtotal: cartSubtotal,
+      discount: discountAmount,
+      shipping: 0,
+      total: finalTotal,
+      paymentMethod:
+        paymentMethod === "upi"
+          ? "UPI"
+          : paymentMethod === "card"
+          ? "Credit Card"
+          : "COD",
+      shippingAddress: {
+        fullName,
+        street,
+        city,
+        state: stateName,
+        zipCode: pincode,
+        phone,
+      },
+      status: "Ordered",
+      trackingId: "",
+      timeline: [
+        {
+          title: "Order Placed",
+          time: new Date().toLocaleTimeString(),
+          active: true,
+        },
+        { title: "Confirmed", time: "", active: false },
+        { title: "Shipped", time: "", active: false },
+        { title: "Delivered", time: "", active: false },
+      ],
     };
 
     setOrders((prev) => [newOrderObj, ...prev]);
@@ -92,177 +151,504 @@ export default function Checkout({ onNavigate }) {
 
   if (orderSuccessId) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-8">
-        <div className="p-6 bg-emerald-50 text-emerald-600 rounded-full w-fit mx-auto"><FiCheckCircle size={64} /></div>
-        <h1 className="font-display font-extrabold text-3xl text-black uppercase">Order Placed!</h1>
-        <div className="bg-white border border-gray-100 rounded-3xl p-8 text-left text-sm space-y-5 shadow-sm">
-          <div className="flex justify-between border-b border-gray-50 pb-4"><span className="font-bold text-gray-500 uppercase">Order ID</span><span className="text-lg font-black text-black font-mono">{orderSuccessId}</span></div>
-          <p className="flex items-center gap-2 text-gray-500"><FiUser /><strong className="text-black">{fullName}</strong></p>
-          <p className="flex items-center gap-2 text-gray-500"><FiMapPin />{street}, {city} - {pincode}</p>
-          <p className="flex items-center gap-2 text-gray-500"><FiCreditCard />₹{finalTotal.toLocaleString()}</p>
+      <main className="min-h-screen bg-[#F8F8F8] px-4 py-10 sm:px-6 sm:py-16">
+        <div className="mx-auto w-full max-w-xl space-y-7 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#007A8A]/10 text-[#007A8A] shadow-sm sm:h-24 sm:w-24">
+            <FiCheckCircle size={52} className="sm:h-16 sm:w-16" />
+          </div>
+
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37]">
+              Kabiraaz Fashion
+            </p>
+
+            <h1 className="font-display text-2xl font-black uppercase text-[#1A1A3A] sm:text-3xl">
+              Order Placed
+            </h1>
+
+            <p className="mt-2 text-xs text-[#666666] sm:text-sm">
+              Thank you for shopping with us. Your order has been confirmed.
+            </p>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-[#E0E0E0] bg-white p-5 text-left shadow-sm sm:rounded-3xl sm:p-7">
+            <div className="flex flex-col gap-2 border-b border-[#E0E0E0] pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#666666]">
+                Order ID
+              </span>
+
+              <span className="font-mono text-lg font-black text-[#007A8A]">
+                {orderSuccessId}
+              </span>
+            </div>
+
+            <p className="flex items-start gap-3 text-sm text-[#666666]">
+              <FiUser className="mt-0.5 shrink-0 text-[#D4AF37]" />
+              <strong className="text-[#1A1A3A]">{fullName}</strong>
+            </p>
+
+            <p className="flex items-start gap-3 text-sm leading-relaxed text-[#666666]">
+              <FiMapPin className="mt-0.5 shrink-0 text-[#D4AF37]" />
+              <span>
+                {street}, {city}
+                {stateName ? `, ${stateName}` : ""} - {pincode}
+              </span>
+            </p>
+
+            <p className="flex items-center gap-3 text-sm text-[#666666]">
+              <FiCreditCard className="text-[#D4AF37]" />
+              <strong className="font-mono text-[#1A1A3A]">
+                ₹{finalTotal.toLocaleString()}
+              </strong>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => onNavigate("home")}
+              className="rounded-xl border border-[#E0E0E0] bg-white px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-[#1A1A3A] transition-all hover:border-[#007A8A] hover:text-[#007A8A]"
+            >
+              Back to Store
+            </button>
+
+            <button
+              onClick={() => onNavigate("user-orders")}
+              className="rounded-xl bg-[#D4AF37] px-4 py-3.5 text-xs font-black uppercase tracking-wider text-[#1A1A3A] transition-all hover:bg-[#B8941F]"
+            >
+              Track Order
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <button onClick={() => onNavigate('home')} className="border-2 border-gray-200 text-gray-700 font-bold text-sm py-4 rounded-xl uppercase cursor-pointer">Back to Store</button>
-          <button onClick={() => onNavigate('user-orders')} className="bg-black text-white font-bold text-sm py-4 rounded-xl uppercase cursor-pointer">Track Order</button>
-        </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <div className="flex items-center gap-3 border-b border-gray-100 pb-6">
-        <button onClick={() => onNavigate('cart')} className="p-2 hover:bg-slate-100 rounded-full cursor-pointer"><FiArrowLeft size={20} /></button>
-        <h1 className="font-display font-extrabold text-2xl uppercase text-black">Secure Checkout</h1>
-      </div>
+    <main className="min-h-screen overflow-hidden bg-[#F8F8F8] px-3 py-5 sm:px-5 sm:py-8 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
 
-      <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-7 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-[#E0E0E0] pb-5 sm:pb-6">
+          <button
+            onClick={() => onNavigate("cart")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E0E0E0] bg-white text-[#1A1A3A] transition-all hover:border-[#007A8A] hover:text-[#007A8A]"
+          >
+            <FiArrowLeft size={18} />
+          </button>
 
-          {/* ✅ SAVED ADDRESSES SECTION */}
-          {savedAddresses.length > 0 && (
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-bold text-base text-black uppercase pb-5 border-b border-gray-100 flex items-center gap-2">
-                <FiMapPin size={18} />
-                Select Delivery Address
-              </h3>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+              Kabiraaz Fashion
+            </p>
+
+            <h1 className="font-display text-xl font-black uppercase text-[#1A1A3A] sm:text-2xl">
+              Secure Checkout
+            </h1>
+          </div>
+        </div>
+
+        <form
+          onSubmit={handlePlaceOrder}
+          className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-7"
+        >
+          <div className="space-y-5 lg:col-span-7">
+
+            {/* Saved Addresses */}
+            {savedAddresses.length > 0 && (
+              <section className="rounded-2xl border border-[#E0E0E0] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+                <div className="flex items-center gap-3 border-b border-[#E0E0E0] pb-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#007A8A]/10 text-[#007A8A]">
+                    <FiMapPin size={17} />
+                  </span>
+
+                  <h3 className="text-sm font-black uppercase tracking-wider text-[#1A1A3A]">
+                    Select Delivery Address
+                  </h3>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {savedAddresses.map((addr) => {
+                    const isSelected =
+                      selectedAddressId === addr._id && !useNewAddress;
+
+                    return (
+                      <label
+                        key={addr._id}
+                        onClick={() => handleSelectAddress(addr)}
+                        className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition-all sm:gap-4 sm:p-5 ${
+                          isSelected
+                            ? "border-[#007A8A] bg-[#007A8A]/5 shadow-sm"
+                            : "border-[#E0E0E0] bg-white hover:border-[#007A8A]/50"
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                            isSelected
+                              ? "border-[#007A8A] bg-[#007A8A]"
+                              : "border-[#E0E0E0]"
+                          }`}
+                        >
+                          {isSelected && (
+                            <FiCheckCircle
+                              className="text-white"
+                              size={10}
+                            />
+                          )}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-bold uppercase text-[#1A1A3A] sm:text-sm">
+                              {addr.label || "Address"}
+                            </span>
+
+                            {addr.isDefault && (
+                              <span className="rounded-full bg-[#D4AF37]/15 px-2 py-0.5 text-[8px] font-black text-[#8A6D16]">
+                                DEFAULT
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs font-bold text-[#333333] sm:text-sm">
+                            {addr.fullName}
+                          </p>
+
+                          <p className="mt-1 text-xs leading-relaxed text-[#666666] sm:text-sm">
+                            {addr.street}, {addr.city}, {addr.state} -{" "}
+                            {addr.pincode}
+                          </p>
+
+                          <p className="mt-1 flex items-center gap-1 text-xs text-[#666666] sm:text-sm">
+                            <FiPhone size={12} className="text-[#007A8A]" />
+                            {addr.phone}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+
+                  <label
+                    onClick={handleUseNewAddress}
+                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed p-4 transition-all sm:gap-4 sm:p-5 ${
+                      useNewAddress
+                        ? "border-[#007A8A] bg-[#007A8A]/5"
+                        : "border-[#E0E0E0] hover:border-[#007A8A]"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                        useNewAddress
+                          ? "border-[#007A8A] bg-[#007A8A]"
+                          : "border-[#E0E0E0]"
+                      }`}
+                    >
+                      {useNewAddress && (
+                        <FiCheckCircle className="text-white" size={10} />
+                      )}
+                    </span>
+
+                    <span className="flex items-center gap-2 text-xs font-bold text-[#007A8A] sm:text-sm">
+                      <FiPlus size={16} />
+                      Deliver to a new address
+                    </span>
+                  </label>
+                </div>
+              </section>
+            )}
+
+            {/* Address Form */}
+            <section className="rounded-2xl border border-[#E0E0E0] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+              <div className="flex items-center gap-3 border-b border-[#E0E0E0] pb-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4AF37]/15 text-[#D4AF37]">
+                  <FiMapPin size={17} />
+                </span>
+
+                <h3 className="text-sm font-black uppercase tracking-wider text-[#1A1A3A]">
+                  {useNewAddress || savedAddresses.length === 0
+                    ? "Delivery Address"
+                    : "Edit Delivery Details"}
+                </h3>
+              </div>
+
+              {!useNewAddress && savedAddresses.length > 0 ? (
+                <div className="mt-5 rounded-2xl border border-[#E0E0E0] bg-[#F8F8F8] p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#1A1A3A]">
+                        {fullName}
+                      </p>
+
+                      <p className="mt-1 text-xs leading-relaxed text-[#666666] sm:text-sm">
+                        {street}, {city}, {stateName} - {pincode}
+                      </p>
+
+                      <p className="mt-1 text-xs text-[#666666] sm:text-sm">
+                        Phone: {phone}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleUseNewAddress}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-[#007A8A] hover:bg-[#007A8A]/10"
+                    >
+                      <FiEdit2 size={12} />
+                      Change
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                  {[
+                    {
+                      label: "Full Name",
+                      value: fullName,
+                      setValue: setFullName,
+                      type: "text",
+                    },
+                    {
+                      label: "Phone Number",
+                      value: phone,
+                      setValue: setPhone,
+                      type: "tel",
+                    },
+                    {
+                      label: "Street Address",
+                      value: street,
+                      setValue: setStreet,
+                      type: "text",
+                      full: true,
+                    },
+                    {
+                      label: "City",
+                      value: city,
+                      setValue: setCity,
+                      type: "text",
+                    },
+                    {
+                      label: "State",
+                      value: stateName,
+                      setValue: setStateName,
+                      type: "text",
+                    },
+                    {
+                      label: "Pincode",
+                      value: pincode,
+                      setValue: setPincode,
+                      type: "text",
+                    },
+                  ].map((field) => (
+                    <label
+                      key={field.label}
+                      className={field.full ? "sm:col-span-2" : ""}
+                    >
+                      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#666666]">
+                        {field.label}
+                      </span>
+
+                      <input
+                        type={field.type}
+                        required
+                        placeholder={field.label}
+                        value={field.value}
+                        onChange={(e) => field.setValue(e.target.value)}
+                        className="w-full rounded-xl border border-[#E0E0E0] bg-[#F8F8F8] px-3.5 py-3 text-xs text-[#1A1A3A] outline-none transition-all placeholder:text-[#666666] focus:border-[#007A8A] focus:bg-white focus:ring-2 focus:ring-[#007A8A]/10 sm:text-sm"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Payment */}
+            <section className="rounded-2xl border border-[#E0E0E0] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+              <div className="flex items-center gap-3 border-b border-[#E0E0E0] pb-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#007A8A]/10 text-[#007A8A]">
+                  <FiCreditCard size={17} />
+                </span>
+
+                <h3 className="text-sm font-black uppercase tracking-wider text-[#1A1A3A]">
+                  Payment Method
+                </h3>
+              </div>
 
               <div className="mt-5 space-y-3">
-                {savedAddresses.map((addr) => (
-                  <label
-                    key={addr._id}
-                    className={`flex items-start gap-4 p-5 border-2 rounded-2xl cursor-pointer transition-all ${
-                      selectedAddressId === addr._id && !useNewAddress
-                        ? 'border-blue-600 bg-blue-50/50 shadow-sm'
-                        : 'border-gray-100 hover:border-gray-300 bg-white'
-                    }`}
-                    onClick={() => handleSelectAddress(addr)}
-                  >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                      selectedAddressId === addr._id && !useNewAddress ? 'border-blue-600 bg-blue-600' : 'border-gray-300'
-                    }`}>
-                      {selectedAddressId === addr._id && !useNewAddress && <FiCheckCircle className="text-white" size={10} />}
-                    </div>
+                {[
+                  {
+                    id: "upi",
+                    title: "UPI / NetBanking",
+                    icon: <FiSmartphone size={21} />,
+                  },
+                  {
+                    id: "card",
+                    title: "Credit / Debit Card",
+                    icon: <FiCreditCard size={21} />,
+                  },
+                  {
+                    id: "cod",
+                    title: "Cash on Delivery",
+                    icon: <FiSend size={21} />,
+                  },
+                ].map((pm) => {
+                  const isSelected = paymentMethod === pm.id;
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-gray-800 uppercase">{addr.label || 'Address'}</span>
-                        {addr.isDefault && (
-                          <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">DEFAULT</span>
+                  return (
+                    <label
+                      key={pm.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-4 transition-all sm:gap-4 sm:p-5 ${
+                        isSelected
+                          ? "border-[#1A1A3A] bg-[#1A1A3A]/5"
+                          : "border-[#E0E0E0] hover:border-[#007A8A]/50"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                          isSelected
+                            ? "border-[#1A1A3A] bg-[#1A1A3A]"
+                            : "border-[#E0E0E0]"
+                        }`}
+                      >
+                        {isSelected && (
+                          <FiCheckCircle className="text-white" size={10} />
                         )}
-                      </div>
-                      <p className="text-sm font-semibold text-gray-700">{addr.fullName}</p>
-                      <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                        {addr.street}, {addr.city}, {addr.state} - {addr.pincode}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
-                        <FiPhone size={12} /> {addr.phone}
-                      </p>
-                    </div>
-                  </label>
-                ))}
+                      </span>
 
-                {/* Use New Address Option */}
-                <label
-                  className={`flex items-center gap-4 p-5 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
-                    useNewAddress
-                      ? 'border-blue-600 bg-blue-50/50'
-                      : 'border-gray-200 hover:border-gray-400 bg-white'
-                  }`}
-                  onClick={handleUseNewAddress}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    useNewAddress ? 'border-blue-600 bg-blue-600' : 'border-gray-300'
-                  }`}>
-                    {useNewAddress && <FiCheckCircle className="text-white" size={10} />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FiPlus size={16} className="text-blue-600" />
-                    <span className="text-sm font-bold text-blue-600">Deliver to a new address</span>
-                  </div>
-                </label>
+                      <span
+                        className={
+                          isSelected
+                            ? "text-[#007A8A]"
+                            : "text-[#666666]"
+                        }
+                      >
+                        {pm.icon}
+                      </span>
+
+                      <p className="text-xs font-bold uppercase text-[#1A1A3A] sm:text-sm">
+                        {pm.title}
+                      </p>
+
+                      <input
+                        type="radio"
+                        name="payment"
+                        checked={isSelected}
+                        onChange={() => setPaymentMethod(pm.id)}
+                        className="hidden"
+                      />
+                    </label>
+                  );
+                })}
               </div>
-            </div>
-          )}
+            </section>
+          </div>
 
-          {/* ✅ ADDRESS FORM (shows when new address selected or no saved addresses) */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="font-bold text-base text-black uppercase pb-5 border-b border-gray-100 flex items-center gap-2">
-              <FiMapPin size={18} />
-              {useNewAddress || savedAddresses.length === 0 ? 'Delivery Address' : 'Edit Delivery Details'}
-            </h3>
+          {/* Order Summary */}
+          <aside className="lg:sticky lg:top-24 lg:col-span-5">
+            <div className="overflow-hidden rounded-2xl border border-[#E0E0E0] bg-white shadow-sm sm:rounded-3xl">
+              <div className="flex items-center gap-3 border-b border-[#E0E0E0] p-4 sm:p-6">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4AF37]/15 text-[#D4AF37]">
+                  <FiBox size={17} />
+                </span>
 
-            {(!useNewAddress && savedAddresses.length > 0) ? (
-              /* Show selected address summary (read-only with edit option) */
-              <div className="mt-5 p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">{fullName}</p>
-                    <p className="text-sm text-gray-600 mt-1">{street}, {city}, {stateName} - {pincode}</p>
-                    <p className="text-sm text-gray-600 mt-1">Phone: {phone}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleUseNewAddress}
-                    className="text-blue-600 hover:text-blue-700 text-xs font-bold flex items-center gap-1"
+                <h3 className="text-sm font-black uppercase tracking-wider text-[#1A1A3A]">
+                  Order Summary ({cart.length})
+                </h3>
+              </div>
+
+              <div className="max-h-[320px] space-y-4 overflow-y-auto p-4 sm:p-6">
+                {cart.map((item) => (
+                  <div
+                    key={item.id || item._id}
+                    className="flex items-center justify-between gap-3"
                   >
-                    <FiEdit2 size={12} /> Change
-                  </button>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <img
+                        src={
+                          item.image ||
+                          "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=80"
+                        }
+                        alt={item.name}
+                        className="h-14 w-14 shrink-0 rounded-xl border border-[#E0E0E0] bg-[#F8F8F8] object-cover"
+                      />
+
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-xs font-bold text-[#1A1A3A] sm:text-sm">
+                          {item.name}
+                        </p>
+
+                        <p className="mt-1 text-[10px] text-[#666666]">
+                          Qty: {item.quantity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="shrink-0 font-mono text-xs font-black text-[#1A1A3A] sm:text-sm">
+                      ₹
+                      {(
+                        (Number(item.price) || 0) *
+                        (Number(item.quantity) || 1)
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3 border-t border-[#E0E0E0] p-4 sm:p-6">
+                <div className="flex justify-between text-sm text-[#333333]">
+                  <span>Subtotal</span>
+                  <span className="font-mono font-semibold">
+                    ₹{cartSubtotal.toLocaleString()}
+                  </span>
+                </div>
+
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm text-[#007A8A]">
+                    <span className="flex items-center gap-1">
+                      <FiTag size={14} />
+                      {appliedCoupon.code}
+                    </span>
+
+                    <span className="font-mono">
+                      -₹{discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-sm text-[#333333]">
+                  <span>Shipping</span>
+                  <span className="font-semibold text-[#007A8A]">
+                    Free
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-dashed border-[#E0E0E0] pt-4">
+                  <span className="text-lg font-black text-[#1A1A3A]">
+                    Total
+                  </span>
+
+                  <span className="font-mono text-xl font-black text-[#1A1A3A] sm:text-2xl">
+                    ₹{finalTotal.toLocaleString()}
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4AF37] py-3.5 text-xs font-black uppercase tracking-widest text-[#1A1A3A] transition-all hover:bg-[#B8941F] hover:shadow-md sm:text-sm"
+                >
+                  <FiHeart size={16} />
+                  Place Order
+                </button>
+
+                <div className="flex items-center justify-center gap-2 pt-1 text-[#666666]">
+                  <FiShield size={15} className="text-[#007A8A]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    Secure Payments
+                  </span>
                 </div>
               </div>
-            ) : (
-              /* Full address form */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
-                <input type="text" required placeholder="Full Name" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                <input type="tel" required placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <input type="text" required placeholder="Street Address" className="sm:col-span-2 w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={street} onChange={(e) => setStreet(e.target.value)} />
-                <input type="text" required placeholder="City" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={city} onChange={(e) => setCity(e.target.value)} />
-                <input type="text" required placeholder="State" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={stateName} onChange={(e) => setStateName(e.target.value)} />
-                <input type="text" required placeholder="Pincode" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-black" value={pincode} onChange={(e) => setPincode(e.target.value)} />
-              </div>
-            )}
-          </div>
-
-          {/* Payment Method */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="font-bold text-base text-black uppercase pb-5 border-b border-gray-100 flex items-center gap-2"><FiCreditCard size={18} />Payment Method</h3>
-            <div className="mt-5 space-y-4">
-              {[{ id: "upi", title: "UPI / NetBanking", icon: <FiSmartphone size={22} /> }, { id: "card", title: "Credit / Debit Card", icon: <FiCreditCard size={22} /> }, { id: "cod", title: "Cash on Delivery", icon: <FiSend size={22} /> }].map((pm) => (
-                <label key={pm.id} className={`flex items-center gap-4 p-5 border-2 rounded-2xl cursor-pointer transition-all ${paymentMethod === pm.id ? 'border-black bg-slate-50' : 'border-gray-100 hover:border-gray-300'}`}>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === pm.id ? 'border-black bg-black' : 'border-gray-300'}`}>{paymentMethod === pm.id && <FiCheckCircle className="text-white" size={10} />}</div>
-                  <div className="text-gray-400">{pm.icon}</div>
-                  <p className="text-sm font-bold text-black uppercase">{pm.title}</p>
-                  <input type="radio" name="payment" checked={paymentMethod === pm.id} onChange={() => setPaymentMethod(pm.id)} className="hidden" />
-                </label>
-              ))}
             </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Order Summary */}
-        <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm sticky top-8">
-            <div className="p-6 border-b border-gray-50"><h3 className="font-bold text-base text-black uppercase flex items-center gap-2"><FiBox size={18} />Order Summary ({cart.length})</h3></div>
-            <div className="p-6 space-y-4 max-h-[320px] overflow-y-auto">
-              {cart.map((item) => (
-                <div key={item.id || item._id} className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3"><img src={item.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=60'} alt={item.name} className="w-14 h-14 object-cover rounded-xl bg-slate-50" /><div><p className="text-sm font-semibold text-black line-clamp-1">{item.name}</p><p className="text-xs text-gray-400">Qty: {item.quantity}</p></div></div>
-                  <p className="text-sm font-black text-black">₹{((Number(item.price) || 0) * (Number(item.quantity) || 1)).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-            <div className="px-6 pb-6 space-y-3">
-              <div className="flex justify-between text-sm"><span>Subtotal</span><span className="font-semibold">₹{cartSubtotal.toLocaleString()}</span></div>
-              {appliedCoupon && <div className="flex justify-between text-sm text-emerald-600"><span><FiTag size={14} className="inline" /> {appliedCoupon.code}</span><span>-₹{discountAmount.toLocaleString()}</span></div>}
-              <div className="flex justify-between text-sm"><span>Shipping</span><span className="text-emerald-600">Free</span></div>
-              <div className="border-t pt-3 flex justify-between"><span className="text-lg font-bold">Total</span><span className="text-2xl font-extrabold">₹{finalTotal.toLocaleString()}</span></div>
-            </div>
-            <div className="px-6 pb-6">
-              <button type="submit" className="w-full bg-black hover:bg-gray-800 text-white font-bold text-sm uppercase tracking-widest py-4 rounded-xl cursor-pointer flex items-center justify-center gap-2"><FiHeart size={16} />Place Order</button>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
+          </aside>
+        </form>
+      </div>
+    </main>
   );
 }

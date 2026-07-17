@@ -41,7 +41,7 @@ const normalizeProductForCart = (product) => {
     price: Number(product.salePrice ?? product.price ?? 0),
     oldPrice: product.oldPrice ?? product.compareAtPrice ?? null,
     category: typeof product.category === "object" ? product.category?.name || "Fashion" : product.category || "Fashion",
-    brand: product.brand || "Luxe Atelier",
+    brand: product.brand || "Kabiraaz Fashion",
     stock: product.inventory?.quantity ?? product.stock ?? 10,
   };
 };
@@ -118,10 +118,10 @@ const AtelierReels = ({ siteSettings, onNavigate }) => {
 
   if (loading) {
     return (
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           {[1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="aspect-[9/16] rounded-2xl bg-gray-100 animate-pulse" />
+            <div key={item} className="aspect-[9/16] rounded-2xl bg-zinc-100 animate-pulse border border-zinc-200" />
           ))}
         </div>
       </section>
@@ -132,16 +132,27 @@ const AtelierReels = ({ siteSettings, onNavigate }) => {
 
   return (
     <>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="text-center sm:text-left">
-            <span className="text-[10px] text-[#d49a34] uppercase font-bold tracking-[0.3em]">#LuxeAtelier</span>
-            <h2 className="font-display font-extrabold text-2xl text-black uppercase mt-1">Atelier Reels</h2>
-            <p className="text-xs text-gray-400 mt-1">Watch our latest style drops & shop the look</p>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-[#F8F8F8] rounded-3xl my-8">
+        {/* Header - Instagram / Luxe Inspired */}
+        <div className="flex flex-col sm:flex-row justify-between items-center text-center sm:text-left gap-4 pb-2 border-b border-zinc-200/60">
+          <div>
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#007A8A] animate-ping" />
+              <span className="text-[11px] text-[#D4AF37] uppercase font-black tracking-[0.25em]">#KabiraazFashion</span>
+            </div>
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#1A1A3A] uppercase tracking-tight">
+              Atelier Reels
+            </h2>
+            <p className="text-xs text-[#333333]/80 font-medium mt-1">Watch our latest style drops & shop the look directly</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-zinc-200">
+            <FiInstagram className="text-[#D4AF37] text-lg animate-pulse" />
+            <span className="text-xs font-semibold text-[#1A1A3A]">@kabiraaz.fashion</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        {/* Reels Grid (Ultra responsive, supports tiny mobiles clean layout) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
           {reels.map((reel, idx) => {
             const linkedProduct = normalizeProductForCart(reel.product);
             const productImage = linkedProduct ? getProductImage(linkedProduct) : "";
@@ -151,54 +162,82 @@ const AtelierReels = ({ siteSettings, onNavigate }) => {
               <div
                 key={reel._id || reel.id || idx}
                 onClick={(e) => playReel(e, reel)}
-                className="relative aspect-[9/16] rounded-2xl md:rounded-3xl overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
+                className="relative aspect-[9/16] rounded-2xl md:rounded-3xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5 bg-[#1A1A3A] border border-zinc-200/50"
               >
-                {displayThumbnail ? (
-                  <img src={displayThumbnail} alt={reel.title || 'Reel'} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-700 via-pink-600 to-orange-400 flex items-center justify-center">
-                    <FiPlay className="text-white/80" size={44} />
+                {/* 1. Simulated Instagram Profile Badge (Top Left Overlay) */}
+                <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                    <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-[#D4AF37] via-[#2E3192] to-[#007A8A] p-[1.2px]">
+                      <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                        <span className="text-[7px] text-[#D4AF37] font-black">K</span>
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-white font-bold tracking-wide truncate max-w-[65px] xs:max-w-[80px]">
+                      kabiraaz
+                    </span>
                   </div>
-                )}
-
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/30 pointer-events-none" />
-
-                {/* Center Play Icon Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 scale-75 group-hover:scale-100 transition-transform duration-300 shadow-xl">
-                    <FiPlay className="w-6 h-6 text-white ml-1 fill-white" />
+                  <div className="w-5 h-5 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10">
+                    <FiInstagram className="text-white w-2.5 h-2.5" />
                   </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex flex-col gap-3">
+                {/* Thumbnail Layer */}
+                {displayThumbnail ? (
+                  <img 
+                    src={displayThumbnail} 
+                    alt={reel.title || 'Reel'} 
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A3A] via-[#2E3192] to-[#007A8A] flex items-center justify-center">
+                    <FiPlay className="text-white/80" size={40} />
+                  </div>
+                )}
+
+                {/* Standard Instagram Style Gradients */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/40 pointer-events-none" />
+
+                {/* Center Hover Instagram Play Icon Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <div className="w-12 h-12 bg-[#007A8A]/80 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 scale-90 group-hover:scale-100 transition-transform duration-300 shadow-xl">
+                    <FiPlay className="w-5 h-5 text-[#D4AF37] ml-0.5 fill-[#D4AF37]" />
+                  </div>
+                </div>
+
+                {/* Bottom Content Area */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-20 flex flex-col gap-2.5">
                   <div>
-                    <h3 className="text-white text-[13px] font-black line-clamp-1 mb-1">
+                    <h3 className="text-white text-[12px] sm:text-[13px] font-black line-clamp-1 mb-0.5 tracking-wide uppercase drop-shadow">
                       {reel.title || (linkedProduct ? linkedProduct.name : 'Exclusive Look')}
                     </h3>
                     {linkedProduct && (
-                      <span className="text-[#d49a34] text-[12px] font-black">
-                        ₹{Number(linkedProduct.price || 0).toLocaleString()}
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[#D4AF37] text-[12px] sm:text-[13px] font-black">
+                          ₹{Number(linkedProduct.price || 0).toLocaleString()}
+                        </span>
                         {linkedProduct.oldPrice && (
-                          <span className="text-white/50 text-[9px] line-through ml-2">₹{Number(linkedProduct.oldPrice).toLocaleString()}</span>
+                          <span className="text-white/40 text-[9px] line-through">
+                            ₹{Number(linkedProduct.oldPrice).toLocaleString()}
+                          </span>
                         )}
-                      </span>
+                      </div>
                     )}
                   </div>
 
                   {linkedProduct && (
-                    <div className="flex items-center gap-2 pt-1 w-full">
+                    <div className="flex items-center gap-1.5 pt-0.5 w-full">
                       <button
                         onClick={(e) => handleAddToCart(e, reel)}
-                        className="flex-1 bg-black/60 hover:bg-black/90 backdrop-blur-md text-white border border-white/30 text-[9px] font-black uppercase tracking-widest py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                        className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 text-[9px] font-black uppercase tracking-wider py-2 rounded-xl flex items-center justify-center gap-1 transition-all"
                       >
-                        <FiShoppingCart size={11} /> Add
+                        <FiShoppingCart size={10} /> Add
                       </button>
 
                       <button
                         onClick={(e) => handleBuyNow(e, reel)}
-                        className="flex-[1.5] bg-gradient-to-r from-[#d49a34] to-[#f3c05b] hover:from-[#c28c2e] text-black text-[9px] font-black uppercase tracking-widest py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-lg"
+                        className="flex-[1.4] bg-gradient-to-r from-[#D4AF37] to-[#F8F8F8] hover:from-[#c28c2e] hover:to-[#e6b945] text-[#1A1A3A] text-[9px] font-black uppercase tracking-wider py-2 rounded-xl flex items-center justify-center gap-1 transition-all shadow-md"
                       >
-                        <FiShoppingBag size={11} /> Buy Now
+                        <FiShoppingBag size={10} /> Buy Now
                       </button>
                     </div>
                   )}
@@ -209,24 +248,41 @@ const AtelierReels = ({ siteSettings, onNavigate }) => {
         </div>
       </section>
 
-      {/* ✅ MODAL PLAYER */}
+      {/* ✅ INSTAGRAM STYLE MODAL PLAYER */}
       {playingReel && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/95 backdrop-blur-md"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPlayingReel(null); }}
         >
           <div
-            className="relative z-10 w-full max-w-[430px] aspect-[9/16] bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-            onClick={(e) => e.stopPropagation()} // Prevent clicking video from closing modal
+            className="relative z-10 w-full max-w-[400px] h-[85vh] sm:h-auto sm:aspect-[9/16] bg-[#1A1A3A] rounded-3xl overflow-hidden shadow-2xl border border-white/15 flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()} // Prevent closing modal on inner clicks
           >
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPlayingReel(null); }}
-              className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/20 text-2xl flex items-center justify-center hover:bg-red-500 hover:scale-110 transition-all cursor-pointer"
-            >
-              ×
-            </button>
+            {/* Modal Header */}
+            <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between">
+              <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#007A8A] p-[1.5px]">
+                  <div className="w-full h-full rounded-full bg-[#1A1A3A] flex items-center justify-center">
+                    <span className="text-[8px] text-[#D4AF37] font-black">K</span>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-white font-bold leading-tight">kabiraaz.fashion</span>
+                  <span className="text-[8px] text-[#D4AF37] font-bold tracking-widest uppercase leading-none">Atelier</span>
+                </div>
+              </div>
 
-            <div className="absolute inset-0 z-10">
+              {/* Elegant Close Button */}
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPlayingReel(null); }}
+                className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white/90 border border-white/10 text-xl flex items-center justify-center hover:bg-red-500 hover:text-white hover:scale-105 transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Container Area */}
+            <div className="absolute inset-0 z-10 bg-black">
               {playingReel.videoUrl ? (
                 <video src={playingReel.videoUrl} className="w-full h-full object-cover" autoPlay controls loop playsInline />
               ) : playingReel.reelUrl ? (
@@ -238,33 +294,42 @@ const AtelierReels = ({ siteSettings, onNavigate }) => {
                   allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white/50 text-sm gap-4">
-                  <FiInstagram size={40} className="text-white/30" />
+                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-white/50 text-xs gap-3">
+                  <FiInstagram size={35} className="text-[#D4AF37] animate-pulse" />
                   <p>Video source not available</p>
                 </div>
               )}
             </div>
 
+            {/* Premium Attached Product Drawer inside Player */}
             {normalizeProductForCart(playingReel.product) && (
-              <div className="absolute left-3 right-3 bottom-6 z-40 bg-black/80 backdrop-blur-xl border border-white/15 rounded-2xl p-3 shadow-2xl">
+              <div className="absolute left-3 right-3 bottom-4 z-40 bg-gradient-to-b from-[#1A1A3A]/90 to-black/95 backdrop-blur-xl border border-white/15 rounded-2xl p-3 shadow-2xl">
                 <div className="flex items-center gap-3">
-                  <img src={normalizeProductForCart(playingReel.product).image} alt="product" className="w-14 h-14 rounded-xl object-cover border border-white/10" />
+                  <img 
+                    src={normalizeProductForCart(playingReel.product).image} 
+                    alt="product" 
+                    className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-md" 
+                  />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-white text-xs font-black truncate">{normalizeProductForCart(playingReel.product).name}</h4>
-                    <p className="text-[#d49a34] text-[11px] font-bold mt-0.5">₹{Number(normalizeProductForCart(playingReel.product).price || 0).toLocaleString()}</p>
+                    <h4 className="text-white text-[11px] sm:text-xs font-black truncate tracking-wide">
+                      {normalizeProductForCart(playingReel.product).name}
+                    </h4>
+                    <p className="text-[#D4AF37] text-[11px] font-black mt-0.5">
+                      ₹{Number(normalizeProductForCart(playingReel.product).price || 0).toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   <button
                     onClick={(e) => { setPlayingReel(null); handleAddToCart(e, playingReel); }}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-600 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all cursor-pointer"
+                    className="bg-[#007A8A]/90 hover:bg-[#007A8A] text-white border border-[#007A8A]/20 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all cursor-pointer"
                   >
                     Add To Cart
                   </button>
                   <button
                     onClick={(e) => { setPlayingReel(null); handleBuyNow(e, playingReel); }}
-                    className="bg-gradient-to-r from-[#d49a34] to-[#f3c05b] text-black text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all cursor-pointer"
+                    className="bg-gradient-to-r from-[#D4AF37] to-[#F8F8F8] text-[#1A1A3A] hover:opacity-90 text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all cursor-pointer shadow-lg"
                   >
                     Buy Now ⚡
                   </button>
