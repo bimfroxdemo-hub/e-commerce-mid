@@ -11,12 +11,19 @@ const {
   sendOrderUpdate
 } = require('../../controllers/admin/order.controller');
 const { updateOrderStatusValidation } = require('../../validations/order.validation');
-const authenticate = require('../../middleware/auth');
-const adminOnly = require('../../middleware/admin');
-const validate = require('../../middleware/validate');
+const authModule = require('../../middleware/auth');
+const validateModule = require('../../middleware/validate');
+
+const authenticate = typeof authModule === 'function' ? authModule : authModule.authenticate;
+const adminOrSeller = authModule.adminOrSeller;
+
+const validate =
+  typeof validateModule === 'function'
+    ? validateModule
+    : validateModule.validate;
 
 router.use(authenticate);
-router.use(adminOnly);
+router.use(adminOrSeller); // Updated to allow scoped seller order tracking
 
 router.get('/', getAllOrders);
 router.get('/stats', getOrderStats);

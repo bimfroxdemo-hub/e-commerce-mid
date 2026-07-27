@@ -7,6 +7,14 @@ const categorySchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  slug: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    index: true // Indexed for fast query routing
+  },
   description: {
     type: String,
     default: ''

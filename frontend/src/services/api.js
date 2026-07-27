@@ -6,7 +6,7 @@ import axios from "axios";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
-// ✅ Base URL without /api
+// Base URL without /api
 const BASE_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5001"
 ).replace("/api", "");
@@ -28,28 +28,43 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("luxe_token");
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
 // ==============================
 // Response Interceptor
 // ==============================
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(
+      `✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`
+    );
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
-      console.warn("Unauthorized. Clearing session...");
-
+    // Handle different types of errors
+    if (error.code === 'ERR_NETWORK') {
+      console.error('❌ Network Error - Check if backend is running and CORS is configured');
+    } else if (error.response?.status === 429) {
+      console.error('❌ Rate limited - too many requests');
+    } else if (error.response?.status === 401) {
+      console.warn("❌ Unauthorized - Clearing session...");
       localStorage.removeItem("luxe_token");
       localStorage.removeItem("luxe_user");
     }
+
+    console.error(
+      `❌ ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+      error.response?.status,
+      error.response?.data
+    );
 
     return Promise.reject(error);
   }
@@ -62,7 +77,6 @@ const saveAuthData = (token, user) => {
   if (token) {
     localStorage.setItem("luxe_token", token);
   }
-
   if (user) {
     localStorage.setItem("luxe_user", JSON.stringify(user));
   }
@@ -93,10 +107,7 @@ const extractAuthPayload = (data) => {
     data?.data?.data?.admin ||
     null;
 
-  return {
-    token,
-    user,
-  };
+  return { token, user };
 };
 
 const handleError = (error) => {
@@ -147,11 +158,9 @@ export const authAPI = {
     });
 
     const { token, user } = extractAuthPayload(data);
-
     if (token) {
       saveAuthData(token, user);
     }
-
     return data;
   },
 
@@ -160,18 +169,111 @@ export const authAPI = {
       method: "post",
       url: "/auth/login",
       data: {
+        loginType: "email",
         email,
         password,
       },
     });
 
     const { token, user } = extractAuthPayload(data);
-
     if (token) {
       saveAuthData(token, user);
     }
-
     return data;
+  },
+
+  loginWithEmail: async (email, password) => {
+    const data = await request({
+      method: "post",
+      url: "/auth/login",
+      data: {
+        loginType: "email",
+        email,
+        password,
+      },
+    });
+
+    const { token, user } = extractAuthPayload(data);
+    if (token) saveAuthData(token, user);
+    return data;
+  },
+
+  loginWithGoogle: async (accessToken) => {
+    const data = await request({
+      method: "post",
+      url: "/auth/login",
+      data: {
+        loginType: "google",
+        accessToken,
+      },
+    });
+
+    const { token, user } = extractAuthPayload(data);
+    if (token) saveAuthData(token, user);
+    return data;
+  },
+
+  loginWithFacebook: async (accessToken) => {
+    const data = await request({
+      method: "post",
+      url: "/auth/login",
+      data: {
+        loginType: "facebook",
+        accessToken,
+      },
+    });
+
+    const { token, user } = extractAuthPayload(data);
+    if (token) saveAuthData(token, user);
+    return data;
+  },
+
+  loginWithPhone: async (phone, otp) => {
+    const data = await request({
+      method: "post",
+      url: "/auth/login",
+      data: {
+        loginType: "phone",
+        phone,
+        otp,
+      },
+    });
+
+    const { token, user } = extractAuthPayload(data);
+    if (token) saveAuthData(token, user);
+    return data;
+  },
+
+  loginWithWhatsApp: async (phone, otp) => {
+    const data = await request({
+      method: "post",
+      url: "/auth/login",
+      data: {
+        loginType: "whatsapp",
+        phone,
+        otp,
+      },
+    });
+
+    const { token, user } = extractAuthPayload(data);
+    if (token) saveAuthData(token, user);
+    return data;
+  },
+
+  sendPhoneOTP: async (phone) => {
+    return request({
+      method: "post",
+      url: "/auth/send-otp",
+      data: { phone },
+    });
+  },
+
+  sendWhatsAppOTP: async (phone) => {
+    return request({
+      method: "post",
+      url: "/auth/whatsapp/send-otp",
+      data: { phone },
+    });
   },
 
   adminLogin: async (email, password) => {
@@ -185,11 +287,9 @@ export const authAPI = {
     });
 
     const { token, user } = extractAuthPayload(data);
-
     if (token) {
       saveAuthData(token, user);
     }
-
     return data;
   },
 
@@ -197,14 +297,12 @@ export const authAPI = {
     try {
       await apiClient.post("/auth/logout");
       clearAuthData();
-
       return {
         success: true,
         message: "Logged out successfully",
       };
     } catch (error) {
       clearAuthData();
-
       return {
         success: true,
         message: "Logged out locally",
@@ -306,8 +404,50 @@ export const cartAPI = {
       url: "/cart/count",
     }),
 
-  addToCart: async (productId, quantity = 1, variant = null) =>
-    request({
+  addToCart: async (productId, quantity = 1, variant = null) => {
+    // Handle object parameter
+    if (productId && typeof productId === 'object') {
+      const payload = productId;
+      return request({
+        method: "post",
+        url: "/cart/add",
+        data: {
+          productId: payload.productId || payload.id || payload._id,
+          quantity: payload.quantity ?? 1,
+          variant: payload.variant ?? null,
+        },
+      });
+    }
+    
+    // Handle individual parameters
+    return request({
+      method: "post",
+      url: "/cart/add",
+      data: {
+        productId,
+        focusCategory: null,
+        quantity,
+        variant,
+      },
+    });
+  },
+
+  // Alias for compatibility with AppContext
+  addItem: async (productId, quantity = 1, variant = null) => {
+    if (productId && typeof productId === 'object') {
+      const payload = productId;
+      return request({
+        method: "post",
+        url: "/cart/add",
+        data: {
+          productId: payload.productId || payload.id || payload._id,
+          quantity: payload.quantity ?? 1,
+          variant: payload.variant ?? null,
+        },
+      });
+    }
+    
+    return request({
       method: "post",
       url: "/cart/add",
       data: {
@@ -315,7 +455,8 @@ export const cartAPI = {
         quantity,
         variant,
       },
-    }),
+    });
+  },
 
   updateCartItem: async (itemId, quantity) =>
     request({
@@ -326,7 +467,34 @@ export const cartAPI = {
       },
     }),
 
+  // Alias for updating cart items
+  updateItem: async (itemId, quantity) =>
+    request({
+      method: "put",
+      url: `/cart/items/${itemId}`,
+      data: {
+        quantity,
+      },
+    }),
+
+  // Alias for AppContext's updateQuantity call
+  updateQuantity: async (itemId, quantity) =>
+    request({
+      method: "put",
+      url: `/cart/items/${itemId}`,
+      data: {
+        quantity,
+      },
+    }),
+
   removeCartItem: async (itemId) =>
+    request({
+      method: "delete",
+      url: `/cart/items/${itemId}`,
+    }),
+
+  // Alias for removing cart items
+  removeItem: async (itemId) =>
     request({
       method: "delete",
       url: `/cart/items/${itemId}`,
@@ -348,6 +516,13 @@ export const checkoutAPI = {
       method: "post",
       url: "/checkout",
       data: checkoutData,
+    }),
+
+  verifyPayment: async (paymentDetails) =>
+    request({
+      method: "post",
+      url: "/checkout/verify-payment",
+      data: paymentDetails,
     }),
 
   validateCoupon: async (code) =>
@@ -384,6 +559,13 @@ export const orderAPI = {
       url: `/orders/${id}`,
     }),
 
+  createOrder: async (orderData) =>
+    request({
+      method: "post",
+      url: "/orders",
+      data: orderData,
+    }),
+
   cancelOrder: async (id, reason = "") =>
     request({
       method: "post",
@@ -397,6 +579,13 @@ export const orderAPI = {
     request({
       method: "get",
       url: `/orders/${id}/track`,
+    }),
+
+  updateOrder: async (id, updateData) =>
+    request({
+      method: "put",
+      url: `/orders/${id}`,
+      data: updateData,
     }),
 };
 
@@ -493,6 +682,14 @@ export const profileAPI = {
       data: profileData,
     }),
 
+  // ✅ UPDATED B2B SELLER PROFILE DATABASE SYNC ENDPOINT WITH SECURE PATH
+  updateSellerProfile: async (sellerFormData) =>
+    request({
+      method: "put",
+      url: "/auth/seller/onboard",
+      data: sellerFormData,
+    }),
+
   changePassword: async (passwordData) =>
     request({
       method: "post",
@@ -543,18 +740,13 @@ export const profileAPI = {
 
 // ==============================
 // SECTION 11: INSTAGRAM REELS API
-// Public route: /api/reels
-// Admin route:  /api/admin/reels
-// ==============================
-// ==============================
-// SECTION 11: INSTAGRAM REELS API
 // ==============================
 export const reelsAPI = {
   getPublic: async (limit = 5) =>
     request({
       method: "get",
       url: `/reels?limit=${limit}`,
-      timeout: 8000, // ⚡ Fail fast on public route
+      timeout: 8000,
     }),
 
   getAdmin: async () =>
@@ -592,12 +784,42 @@ export const reelsAPI = {
 };
 
 // ==============================
-// SECTION 12-20: ADMIN ENDPOINTS
+// SECTION 12: PAYMENT API (RAZORPAY)
+// ==============================
+export const paymentAPI = {
+  createOrder: async (orderId) =>
+    request({
+      method: "post",
+      url: "/payment/create-order",
+      data: { orderId },
+    }),
+
+  verifyPayment: async (paymentData) =>
+    request({
+      method: "post",
+      url: "/payment/verify",
+      data: paymentData,
+    }),
+
+  handleFailure: async (failureData) =>
+    request({
+      method: "post",
+      url: "/payment/failure",
+      data: failureData,
+    }),
+
+  getPaymentDetails: async (paymentId) =>
+    request({
+      method: "get",
+      url: `/payment/${paymentId}`,
+    }),
+};
+
+// ==============================
+// SECTION 13: ADMIN ENDPOINTS
 // ==============================
 export const adminAPI = {
-  // ==============================
-  // ADMIN DASHBOARD
-  // ==============================
+  // Admin Dashboard
   dashboard: {
     getStats: async () =>
       request({
@@ -612,9 +834,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN PRODUCTS
-  // ==============================
+  // Admin Products
   products: {
     getAll: async (params = {}) =>
       request({
@@ -687,9 +907,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN INVENTORY
-  // ==============================
+  // Admin Inventory
   inventory: {
     getOverview: async () =>
       request({
@@ -731,9 +949,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN ORDERS
-  // ==============================
+  // Admin Orders
   orders: {
     getAll: async (params = {}) =>
       request({
@@ -796,9 +1012,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN USERS
-  // ==============================
+  // Admin Users
   users: {
     getAll: async (params = {}) =>
       request({
@@ -859,9 +1073,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN CATEGORIES
-  // ==============================
+  // Admin Categories
   categories: {
     getAll: async () =>
       request({
@@ -888,6 +1100,19 @@ export const adminAPI = {
         data: categoryData,
       }),
 
+    uploadImage: async (file) => {
+      const formData = new FormData();
+      formData.append("categoryImage", file);
+      return request({
+        method: "post",
+        url: "/admin/categories/upload",
+        data: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+
     update: async (id, categoryData) =>
       request({
         method: "put",
@@ -909,9 +1134,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN BANNERS
-  // ==============================
+  // Admin Banners
   banners: {
     getAll: async () =>
       request({
@@ -985,9 +1208,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN COUPONS
-  // ==============================
+  // Admin Coupons
   coupons: {
     getAll: async (params = {}) =>
       request({
@@ -1039,10 +1260,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN INSTAGRAM REELS
-  // Backend route: /api/admin/reels
-  // ==============================
+  // Admin Instagram Reels
   reels: {
     getAll: async () =>
       request({
@@ -1057,11 +1275,11 @@ export const adminAPI = {
         data: reelData,
       }),
 
-    update: async (id, reelData) =>
+    update: async (id, data) =>
       request({
         method: "put",
         url: `/admin/reels/${id}`,
-        data: reelData,
+        data,
       }),
 
     toggle: async (id) =>
@@ -1083,9 +1301,7 @@ export const adminAPI = {
       }),
   },
 
-  // ==============================
-  // ADMIN SETTINGS
-  // ==============================
+  // Admin Settings
   settings: {
     getAll: async () =>
       request({
@@ -1165,7 +1381,6 @@ export const adminAPI = {
 export const ProductService = {
   getAll: async (params) => {
     const data = await shopAPI.getProducts(params);
-
     return {
       data: {
         success: true,
@@ -1176,7 +1391,6 @@ export const ProductService = {
 
   getById: async (id) => {
     const data = await shopAPI.getProductById(id);
-
     return {
       data: {
         success: true,
@@ -1189,7 +1403,6 @@ export const ProductService = {
 export const OrderService = {
   create: async (orderData) => {
     const data = await checkoutAPI.processCheckout(orderData);
-
     return {
       data: {
         success: true,
@@ -1199,5 +1412,7 @@ export const OrderService = {
   },
 };
 
-// ✅ ONLY ONE DEFAULT EXPORT
+// ==============================
+// DEFAULT EXPORT
+// ==============================
 export default apiClient;

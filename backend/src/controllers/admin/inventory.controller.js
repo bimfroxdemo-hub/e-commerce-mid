@@ -4,6 +4,47 @@ const { sendSuccess, sendError } = require('../../utils/response');
 
 const getInventoryOverview = async (req, res) => {
   try {
+    // Check if the request is from a Seller
+    if (req.user && req.user.role === 'seller') {
+      const sellerId = req.user._id;
+
+      const totalProducts = await Product.countDocuments({ isActive: true, seller: sellerId });
+      
+      // Fetch low stock items for this seller specifically
+      const lowStockProducts = await Product.find({
+        isActive: true,
+        seller: sellerId,
+        $expr: { $lte: ["$inventory.quantity", "$inventory.lowStockThreshold"] }
+      }).populate('category', 'name');
+
+      const outOfStockProducts = await Product.countDocuments({
+        'inventory.quantity': 0,
+        isActive: true,
+        seller: sellerId
+      });
+
+      const totalStockValue = await Product.aggregate([
+        { $match: { isActive: true, seller: sellerId } },
+        {
+          $group: {
+            _id: null,
+            totalValue: {
+              $sum: { $multiply: ['$price', '$inventory.quantity'] }
+            }
+          }
+        }
+      ]);
+
+      return sendSuccess(res, 'Inventory overview fetched successfully', {
+        totalProducts,
+        lowStockCount: lowStockProducts.length,
+        outOfStockCount: outOfStockProducts,
+        totalStockValue: totalStockValue[0]?.totalValue || 0,
+        lowStockProducts: lowStockProducts.slice(0, 10)
+      });
+    }
+
+    // Default global logic for Admins
     const totalProducts = await Product.countDocuments({ isActive: true });
     const lowStockProducts = await InventoryService.getLowStockProducts();
     const outOfStockProducts = await Product.countDocuments({
@@ -28,7 +69,7 @@ const getInventoryOverview = async (req, res) => {
       lowStockCount: lowStockProducts.length,
       outOfStockCount: outOfStockProducts,
       totalStockValue: totalStockValue[0]?.totalValue || 0,
-      lowStockProducts: lowStockProducts.slice(0, 10) // Show only first 10
+      lowStockProducts: lowStockProducts.slice(0, 10)
     });
   } catch (error) {
     sendError(res, error.message, 500);
@@ -51,6 +92,11 @@ const getInventoryList = async (req, res) => {
 
     // Build filter
     const filter = { isActive: true };
+
+    // ✅ SCOPING RULE: Filter query by seller ID if role is seller
+    if (req.user && req.user.role === 'seller') {
+      filter.seller = req.user._id;
+    }
     
     if (search) {
       filter.$or = [
@@ -106,17 +152,18 @@ const updateStock = async (req, res) => {
       return sendError(res, 'Quantity cannot be negative', 400);
     }
 
-    const product = await InventoryService.updateStock(productId, quantity, operation);
+    // ✅ SECURITY BLOCK: Verify product ownership for sellers
+    if (req.user && req.user.role === 'seller') {
+      const productToCheck = await Product.findById(productId);
+      if (!productToCheck) {
+        return sendError(res, 'Product not found', 404);
+      }
+      if (String(productToCheck.seller) !== String(req.user._id)) {
+        return sendError(res, 'Access denied: You do not own this product', 403);
+      }
+    }
 
-    // Log inventory change (you might want to create an InventoryLog model for this)
-    // await InventoryLog.create({
-    //   product: productId,
-    //   previousQuantity: product.inventory.quantity,
-    //   newQuantity: quantity,
-    //   operation,
-    //   reason,
-    //   updatedBy: req.user.id
-    // });
+    const product = await InventoryService.updateStock(productId, quantity, operation);
 
     sendSuccess(res, 'Stock updated successfully', {
       productId,
@@ -136,6 +183,19 @@ const bulkUpdateStock = async (req, res) => {
 
     for (const update of updates) {
       try {
+        // ✅ SECURITY BLOCK: Verify product ownership in bulk update for sellers
+        if (req.user && req.user.role === 'seller') {
+          const productToCheck = await Product.findById(update.productId);
+          if (!productToCheck) {
+            errors.push({ productId: update.productId, error: 'Product not found' });
+            continue;
+          }
+          if (String(productToCheck.seller) !== String(req.user._id)) {
+            errors.push({ productId: update.productId, error: 'Access denied' });
+            continue;
+          }
+        }
+
         const product = await InventoryService.updateStock(
           update.productId,
           update.quantity,
@@ -169,6 +229,21 @@ const bulkUpdateStock = async (req, res) => {
 const getLowStockAlerts = async (req, res) => {
   try {
     const { threshold = 10 } = req.query;
+
+    // ✅ SCOPING RULE: Sellers only receive alerts for their own inventory
+    if (req.user && req.user.role === 'seller') {
+      const lowStockProducts = await Product.find({
+        isActive: true,
+        seller: req.user._id,
+        'inventory.quantity': { $lte: parseInt(threshold) }
+      }).populate('category', 'name');
+
+      return sendSuccess(res, 'Low stock alerts fetched successfully', {
+        count: lowStockProducts.length,
+        products: lowStockProducts
+      });
+    }
+
     const lowStockProducts = await InventoryService.getLowStockProducts(threshold);
 
     sendSuccess(res, 'Low stock alerts fetched successfully', {
@@ -185,8 +260,18 @@ const getStockMovementHistory = async (req, res) => {
     const { productId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    // This would typically come from an InventoryLog model
-    // For now, returning mock data
+    // ✅ SECURITY BLOCK: Verify product ownership for sellers
+    if (req.user && req.user.role === 'seller') {
+      const productToCheck = await Product.findById(productId);
+      if (!productToCheck) {
+        return sendError(res, 'Product not found', 404);
+      }
+      if (String(productToCheck.seller) !== String(req.user._id)) {
+        return sendError(res, 'Access denied: You do not own this product', 403);
+      }
+    }
+
+    // Mock stock log data
     const mockHistory = [
       {
         date: new Date(),

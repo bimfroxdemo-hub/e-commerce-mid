@@ -1,22 +1,22 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Safety fallback for response sending helper to avoid crashes
-let sendError;
+let sendError = (res, message, statusCode = 500) => {
+  return res.status(statusCode).json({
+    success: false,
+    message
+  });
+};
+
 try {
-  sendError = require('../utils/response').sendError;
+  const responseHelper = require('../utils/response');
+  if (responseHelper && responseHelper.sendError) {
+    sendError = responseHelper.sendError;
+  }
 } catch (error) {
-  sendError = (res, message, statusCode = 500) => {
-    return res.status(statusCode).json({
-      success: false,
-      message
-    });
-  };
+  // Use fallback sendError
 }
 
-// ==============================
-// ✅ MAIN AUTHENTICATION MIDDLEWARE
-// ==============================
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
@@ -27,8 +27,6 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
-    
-    // Support both payload structures: 'id' or 'userId'
     const userId = decoded.id || decoded.userId;
     const user = await User.findById(userId).select('-password');
     
@@ -44,27 +42,18 @@ const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Authentication error:', error.message);
-    
     if (error.name === 'TokenExpiredError') {
       return sendError(res, 'Your session has expired. Please login again.', 401);
     }
-    
     if (error.name === 'JsonWebTokenError') {
       return sendError(res, 'Invalid security token.', 401);
     }
-    
     return sendError(res, 'Authentication failed', 401);
   }
 };
 
-// ==============================
-// ✅ PROTECT MIDDLEWARE (Alias)
-// ==============================
 const protect = authenticate;
 
-// ==============================
-// ✅ ADMIN ONLY MIDDLEWARE
-// ==============================
 const adminOnly = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -73,24 +62,34 @@ const adminOnly = (req, res, next) => {
   }
 };
 
-// ==============================
-// ✅ OPTIONAL AUTH MIDDLEWARE
-// ==============================
+const sellerOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'seller') {
+    next();
+  } else {
+    return sendError(res, 'Access denied. Seller privileges required.', 403);
+  }
+};
+
+const adminOrSeller = (req, res, next) => {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'seller')) {
+    next();
+  } else {
+    return sendError(res, 'Access denied. Unauthorized access role.', 403);
+  }
+};
+
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : authHeader;
-
     if (!token) {
       req.user = null;
       return next();
     }
-
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
       const userId = decoded.id || decoded.userId;
       const user = await User.findById(userId).select('-password');
-
       if (user && user.isActive) {
         req.user = user;
       } else {
@@ -107,23 +106,17 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-// ==============================
-// ✅ CHECK OWNERSHIP MIDDLEWARE
-// ==============================
 const checkOwnership = (resourceField = 'user') => {
   return (req, res, next) => {
     try {
       const resourceUserId = req[resourceField]?._id || req[resourceField];
       const currentUserId = req.user.id || req.user._id;
-
       if (req.user.role === 'admin') {
         return next();
       }
-
       if (resourceUserId.toString() !== currentUserId.toString()) {
         return sendError(res, 'You do not have permission to modify this resource.', 403);
       }
-
       next();
     } catch (error) {
       console.error('Ownership validation error:', error);
@@ -132,46 +125,32 @@ const checkOwnership = (resourceField = 'user') => {
   };
 };
 
-// ==============================
-// ✅ VERIFY EMAIL MIDDLEWARE
-// ==============================
 const verifyEmail = (req, res, next) => {
-  if (req.user && req.user.isEmailVerified) {
+  if (req.user && req.user.emailVerified) {
     next();
   } else {
     return sendError(res, 'Please verify your email address.', 403);
   }
 };
 
-// ==============================
-// ✅ RATE LIMIT BY USER MIDDLEWARE
-// ==============================
-const userRequestTracker = new Map();
 const rateLimitByUser = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
+  const userRequestTracker = new Map();
   return (req, res, next) => {
     if (!req.user) {
       return next();
     }
-
     const userId = req.user.id || req.user._id;
     const now = Date.now();
     const userKey = userId.toString();
 
     if (!userRequestTracker.has(userKey)) {
-      userRequestTracker.set(userKey, {
-        count: 1,
-        resetTime: now + windowMs
-      });
+      userRequestTracker.set(userKey, { count: 1, resetTime: now + windowMs });
       return next();
     }
 
     const userRecord = userRequestTracker.get(userKey);
-
     if (now > userRecord.resetTime) {
-      userRequestTracker.set(userKey, {
-        count: 1,
-        resetTime: now + windowMs
-      });
+      userRequestTracker.set(userKey, { count: 1, resetTime: now + windowMs });
       return next();
     }
 
@@ -184,16 +163,12 @@ const rateLimitByUser = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
   };
 };
 
-// ==============================
-// ✅ BULLETPROOF RESILIENT EXPORT
-// ==============================
-// Exporting the main function as default base level function, 
-// while appending all secondary middleware functions directly to it.
 const authModule = authenticate;
-
 authModule.authenticate = authenticate;
 authModule.protect = protect;
 authModule.adminOnly = adminOnly;
+authModule.sellerOnly = sellerOnly;          
+authModule.adminOrSeller = adminOrSeller;    
 authModule.optionalAuth = optionalAuth;
 authModule.checkOwnership = checkOwnership;
 authModule.verifyEmail = verifyEmail;

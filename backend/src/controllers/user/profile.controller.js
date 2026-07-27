@@ -166,6 +166,59 @@ const deleteAvatar = async (req, res) => {
   }
 };
 
+/**
+ * @desc Update Seller Central settings details (B2B Database Persistence)
+ * @route PUT /api/user/profile/seller
+ * @access Private (Seller only)
+ */
+const updateSellerProfile = async (req, res) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id || req.user.id,
+      {
+        $set: {
+          storeName: req.body.storeName,
+          businessName: req.body.businessName,
+          licenseType: req.body.licenseType,
+          primaryCategory: req.body.primaryCategory,
+          pincode: req.body.pincode,
+          addressLine1: req.body.addressLine1,
+          addressLine2: req.body.addressLine2,
+          city: req.body.city,
+          state: req.body.state,
+          shippingMethod: req.body.shippingMethod,
+          gstNumber: req.body.gstNumber,
+          panNumber: req.body.panNumber,
+          exemptCategory: req.body.exemptCategory,
+          accountHolder: req.body.accountHolder,
+          bankName: req.body.bankName,
+          accountNumber: req.body.accountNumber,
+          ifscCode: req.body.ifscCode,
+          shippingFeeType: req.body.shippingFeeType,
+          localFee: Number(req.body.localFee) || 40,
+          regionalFee: Number(req.body.regionalFee) || 50,
+          nationalFee: Number(req.body.nationalFee) || 60,
+          productTaxCode: req.body.productTaxCode,
+          isHolidayMode: req.body.isHolidayMode,
+          holidayStart: req.body.holidayStart ? new Date(req.body.holidayStart) : null,
+          holidayEnd: req.body.holidayEnd ? new Date(req.body.holidayEnd) : null,
+          holidayPolicy: req.body.holidayPolicy,
+          holidayMessage: req.body.holidayMessage
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return sendError(res, 'Seller profile not found', 404);
+    }
+
+    return sendSuccess(res, 'Seller profile updated successfully', updatedUser);
+  } catch (error) {
+    return sendError(res, error.message || 'Failed to update seller profile', 500);
+  }
+};
+
 // ============ ADDRESS MANAGEMENT ============
 
 const addAddress = async (req, res) => {
@@ -380,6 +433,7 @@ module.exports = {
   changePassword,
   uploadAvatar,
   deleteAvatar,
+  updateSellerProfile, // ✅ Exported for B2B Database Persistence
   
   // Address management
   addAddress,

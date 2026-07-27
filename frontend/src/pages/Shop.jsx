@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
-import { FiGrid, FiList, FiFilter, FiSliders, FiStar, FiX, FiCheck, FiSearch, FiTag, FiShoppingBag } from 'react-icons/fi';
+import { FiGrid, FiList, FiFilter, FiSliders, FiStar, FiX, FiTag, FiShoppingBag, FiSearch } from 'react-icons/fi';
 
 export default function Shop({ onNavigate, onQuickView, routeParams }) {
-  const { products, categories } = useApp();
+  const { products = [], categories = [] } = useApp();
 
   const initialCategory = routeParams?.category || "";
   const initialSearch = routeParams?.search || "";
@@ -27,7 +27,9 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
     if (initialSearch) setSearchQuery(initialSearch);
   }, [initialCategory, initialSearch]);
 
-  const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+  const uniqueBrands = useMemo(() => {
+    return [...new Set(products.map(p => p.brand).filter(Boolean))];
+  }, [products]);
 
   const handleResetFilters = () => {
     setSelectedCategory(""); setSelectedBrand(""); setPriceRange(50000);
@@ -35,52 +37,77 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
     setSortBy("recommended"); setCurrentPageNum(1);
   };
 
-  const filteredProducts = products.filter((product) => {
-    if (!product) return false;
-    const pCat = (product.category || '').toLowerCase();
-    const pBrand = (product.brand || '').toLowerCase();
-    const pName = (product.name || '').toLowerCase();
-    const pPrice = Number(product.price) || 0;
-    const pRating = Number(product.rating) || 0;
-    const pStock = Number(product.stock) || 0;
-    const pTags = Array.isArray(product.tags) ? product.tags : [];
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (!product) return false;
+      const pCat = (product.category || '').toLowerCase();
+      const pBrand = (product.brand || '').toLowerCase();
+      const pName = (product.name || '').toLowerCase();
+      const pPrice = Number(product.price) || 0;
+      const pRating = Number(product.rating) || 0;
+      const pStock = Number(product.stock) || 0;
+      const pTags = Array.isArray(product.tags) ? product.tags : [];
 
-    if (selectedCategory && pCat !== selectedCategory.toLowerCase()) return false;
-    if (selectedBrand && pBrand !== selectedBrand.toLowerCase()) return false;
-    if (pPrice > priceRange) return false;
-    if (pRating < minRating) return false;
-    if (onlyInStock && pStock === 0) return false;
+      if (pPrice > priceRange) return false;
+      if (pRating < minRating) return false;
+      if (onlyInStock && pStock === 0) return false;
+      if (selectedBrand && pBrand !== selectedBrand.toLowerCase()) return false;
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      if (!pName.includes(q) && !pBrand.includes(q) && !pCat.includes(q)) return false;
-    }
+      // Safe category mapping matching by Name, Slug, or ObjectId
+      if (selectedCategory) {
+        const matchedCategory = categories.find(
+          c => c.slug?.toLowerCase() === selectedCategory.toLowerCase() || 
+               c.name?.toLowerCase() === selectedCategory.toLowerCase() ||
+               c._id === selectedCategory ||
+               c.id === selectedCategory
+        );
+        
+        const matchesName = pCat === matchedCategory?.name?.toLowerCase();
+        const matchesSlug = pCat === matchedCategory?.slug?.toLowerCase();
+        const matchesId = product.categoryId === matchedCategory?._id || product.categoryId === matchedCategory?.id;
 
-    if (initialFilter === "deal" && !pTags.includes("deal")) return false;
-    if (initialFilter === "trending" && !pTags.includes("trending")) return false;
-    if (initialFilter === "best" && !pTags.includes("best-seller")) return false;
+        if (!matchesName && !matchesSlug && !matchesId) return false;
+      }
 
-    return true;
-  });
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!pName.includes(q) && !pBrand.includes(q) && !pCat.includes(q)) return false;
+      }
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === "price-low") return (Number(a.price) || 0) - (Number(b.price) || 0);
-    if (sortBy === "price-high") return (Number(b.price) || 0) - (Number(a.price) || 0);
-    if (sortBy === "rating") return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      if (initialFilter === "deal" && !pTags.includes("deal")) return false;
+      if (initialFilter === "trending" && !pTags.includes("trending")) return false;
+      if (initialFilter === "best" && !pTags.includes("best-seller")) return false;
+
+      return true;
+    });
+  }, [products, categories, selectedCategory, selectedBrand, priceRange, minRating, onlyInStock, searchQuery, initialFilter]);
+
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
+    if (sortBy === "price-low") return sorted.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    if (sortBy === "price-high") return sorted.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    if (sortBy === "rating") return sorted.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
     if (sortBy === "discount") {
-      const dA = (Number(a.oldPrice) || 0) > (Number(a.price) || 0) ? ((Number(a.oldPrice) - Number(a.price)) / Number(a.oldPrice)) * 100 : 0;
-      const dB = (Number(b.oldPrice) || 0) > (Number(b.price) || 0) ? ((Number(b.oldPrice) - Number(b.price)) / Number(b.oldPrice)) * 100 : 0;
-      return dB - dA;
+      return sorted.sort((a, b) => {
+        const dA = (Number(a.oldPrice) || 0) > (Number(a.price) || 0) ? ((Number(a.oldPrice) - Number(a.price)) / Number(a.oldPrice)) * 100 : 0;
+        const dB = (Number(b.oldPrice) || 0) > (Number(b.price) || 0) ? ((Number(b.oldPrice) - Number(b.price)) / Number(b.oldPrice)) * 100 : 0;
+        return dB - dA;
+      });
     }
-    return 0;
-  });
+    return sorted;
+  }, [filteredProducts, sortBy]);
 
   const totalItems = sortedProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPageNum - 1) * itemsPerPage;
-  const paginatedProducts = sortedProducts.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedProducts = useMemo(() => {
+    return sortedProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedProducts, startIndex]);
 
-  const handlePageChange = (pageNum) => { setCurrentPageNum(pageNum); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handlePageChange = (pageNum) => { 
+    setCurrentPageNum(pageNum); 
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
 
   return (
     <div id="shop-page-wrapper" className="min-h-screen bg-gradient-to-br from-[#F8F8F8] via-white to-gray-50">
@@ -136,7 +163,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
               </select>
             </div>
 
-            {/* View Toggle - Desktop Only */}
+            {/* View Toggle */}
             <div className="hidden sm:flex items-center border border-gray-100 rounded-xl p-1 bg-white shadow-sm">
               <button 
                 onClick={() => setIsListView(false)} 
@@ -158,7 +185,6 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
           
           {/* Desktop Sidebar Filters */}
           <aside className="hidden lg:block space-y-5 bg-white p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm h-fit sticky top-28">
-            {/* Filter Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <h3 className="font-black text-xs sm:text-sm text-[#1A1A3A] uppercase tracking-wider flex items-center gap-2">
                 <FiSliders className="text-[#007A8A]" />
@@ -196,7 +222,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
               <div className="space-y-1.5 text-xs text-[#333333]">
                 <button 
                   onClick={() => { setSelectedCategory(""); setCurrentPageNum(1); }} 
-                  className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${!selectedCategory ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
+                  className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${!selectedCategory ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
                 >
                   All Categories
                 </button>
@@ -204,7 +230,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
                   <button 
                     key={cat.id} 
                     onClick={() => { setSelectedCategory(cat.slug || cat.name); setCurrentPageNum(1); }} 
-                    className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${selectedCategory === (cat.slug || cat.name) ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
+                    className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${selectedCategory === (cat.slug || cat.name) ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
                   >
                     {cat.name}
                   </button>
@@ -221,7 +247,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
               <div className="space-y-1.5 text-xs text-[#333333]">
                 <button 
                   onClick={() => { setSelectedBrand(""); setCurrentPageNum(1); }} 
-                  className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${!selectedBrand ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
+                  className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${!selectedBrand ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
                 >
                   All Brands
                 </button>
@@ -229,7 +255,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
                   <button 
                     key={b} 
                     onClick={() => { setSelectedBrand(b); setCurrentPageNum(1); }} 
-                    className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${selectedBrand === b ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
+                    className={`w-full text-left py-2 px-3 rounded-xl font-semibold transition-all ${selectedBrand === b ? 'bg-gradient-to-r from-[#007A8A]/10 to-[#2E3192]/10 text-[#1A1A3A] border-[#007A8A]/20 shadow-sm' : 'hover:bg-slate-50'}`}
                   >
                     {b}
                   </button>
@@ -286,7 +312,7 @@ export default function Shop({ onNavigate, onQuickView, routeParams }) {
             </div>
           </aside>
 
-          {/* Main Content */}
+          {/* Products Catalog Display Grid */}
           <main className="lg:col-span-3 space-y-6 sm:space-y-8">
             {totalItems > 0 ? (
               <>

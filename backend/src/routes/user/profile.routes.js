@@ -5,12 +5,13 @@ const {
   updateProfile,
   changePassword,
   uploadAvatar,
-  deleteAvatar,        // NEW
+  deleteAvatar,
   addAddress,
-  getAddresses,        // NEW
+  getAddresses,
   updateAddress,
   deleteAddress,
-  setDefaultAddress
+  setDefaultAddress,
+  updateSellerProfile // ✅ FIXED: Added B2B Seller Update Controller import
 } = require('../../controllers/user/profile.controller');
 const authenticate = require('../../middleware/auth');
 const handleUpload = require('../../middleware/upload');
@@ -21,6 +22,7 @@ router.use(authenticate);
 // ============ PROFILE ROUTES ============
 router.get('/', getProfile);                              // GET /api/profile
 router.put('/', updateProfile);                           // PUT /api/profile
+router.put('/seller', updateSellerProfile);               // ✅ NEW: PUT /api/profile/seller
 
 // ============ PASSWORD ROUTES ============
 router.post('/change-password', changePassword);          // POST /api/profile/change-password

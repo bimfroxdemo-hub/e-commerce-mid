@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -23,6 +23,11 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 import Login from './pages/Login';
 
+// NEW PAGES FOR SELLER Central
+import SellerLanding from './pages/SellerLanding';
+import SellerRegister from './pages/SellerRegister';
+import SellerDashboard from './pages/SellerDashboard';
+
 function MainAppLayout() {
   // ==============================
   // State Management
@@ -31,7 +36,7 @@ function MainAppLayout() {
   const [routeParams, setRouteParams] = useState(null);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
-  const { isAuthenticated, currentUser, isLoading } = useApp();
+  const { isAuthenticated, currentUser, isLoading, categories = [] } = useApp();
 
   // ==============================
   // Helpers
@@ -42,7 +47,6 @@ function MainAppLayout() {
 
   const isAdminUser = (user) => {
     const role = getNormalizedRole(user);
-
     return (
       role === 'admin' ||
       role === 'superadmin' ||
@@ -50,6 +54,34 @@ function MainAppLayout() {
       user?.isAdmin === true
     );
   };
+
+  // ==============================
+  // Dynamic Seller Onboarding Guard
+  // ==============================
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const role = getNormalizedRole(currentUser);
+      if (role === 'seller') {
+        const onboarded = !!currentUser.storeName;
+        localStorage.setItem('isSellerOnboarded', onboarded ? 'true' : 'false');
+
+        // Prevent unauthorized redirection to dashboard on step-by-step registration
+        if (currentPage === 'login' || currentPage === 'register') {
+          if (onboarded) {
+            handleNavigate('seller-dashboard');
+          } else {
+            handleNavigate('seller-onboarding');
+          }
+        }
+
+        // Active Guard: If they try to load dashboard without a registered store name
+        if (currentPage === 'seller-dashboard' && !onboarded) {
+          console.warn('⚠️ Onboarding incomplete. Redirecting back to onboarding wizard.');
+          handleNavigate('seller-onboarding');
+        }
+      }
+    }
+  }, [isAuthenticated, currentUser, currentPage]);
 
   // ==============================
   // Navigation Handler
@@ -67,13 +99,10 @@ function MainAppLayout() {
       });
     }
 
-    // Close quick view when navigating
     setQuickViewProduct(null);
-
     setCurrentPage(page);
     setRouteParams(params);
 
-    // Smooth scroll to top
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 100);
@@ -98,9 +127,6 @@ function MainAppLayout() {
     return Boolean(hasAuth && isAdmin);
   };
 
-  // ==============================
-  // Loading State Handler
-  // ==============================
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -111,6 +137,9 @@ function MainAppLayout() {
       </div>
     );
   }
+
+  // HIDES NAV/FOOTER ON REGISTER FLOWS & WORKSPACE PANELS 
+  const isSellerPortal = ['seller-onboarding', 'seller-dashboard'].includes(currentPage);
 
   // ==============================
   // Render Page Based on State
@@ -133,6 +162,57 @@ function MainAppLayout() {
               onQuickView={setQuickViewProduct}
               routeParams={routeParams}
             />
+          );
+
+        case 'collections':
+          const displayCategories = categories.filter(
+            (cat) => 
+              cat.slug?.toLowerCase() !== 'home' && 
+              cat.name?.toLowerCase() !== 'home' &&
+              cat.slug?.toLowerCase() !== 'home-page' &&
+              cat.slug !== '/' &&
+              cat.name?.toLowerCase() !== 'collections'
+          );
+
+          return (
+            <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto">
+                <div className="text-center mb-12">
+                  <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-[#1A1A3A] mb-3">
+                    Our Collections
+                  </h1>
+                  <div className="w-12 h-[2px] bg-[#D4AF37] mx-auto mb-4" />
+                  <p className="text-sm text-gray-500 max-w-md mx-auto">
+                    Explore our curated seasonal edits and hand-crafted boutique collections.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {displayCategories.map((cat) => (
+                    <div
+                      key={cat.id || cat._id}
+                      onClick={() => handleNavigate('shop', { category: cat.slug || cat.name })}
+                      className="group relative rounded-2xl overflow-hidden cursor-pointer shadow hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
+                      style={{ aspectRatio: '4/5' }}
+                    >
+                      <img
+                        src={cat.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600&auto=format&fit=crop'}
+                        alt={cat.name}
+                        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.08]"
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600'; }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 h-[52%] z-10"
+                        style={{ background: 'linear-gradient(to top,rgba(8,8,22,0.96) 0%,rgba(8,8,22,0.48) 60%,transparent 100%)' }} />
+                      <div className="absolute bottom-0 left-0 right-0 z-30 p-4">
+                        <div className="h-[2px] w-4 mb-2 bg-[#D4AF37] group-hover:w-8 transition-all duration-500" />
+                        <h3 className="font-bold text-sm tracking-wider uppercase text-white leading-tight">{cat.name}</h3>
+                        <p className="text-[10px] font-semibold text-amber-400/90 mt-0.5">{cat.productCount || 0} Items</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           );
 
         case 'product-details':
@@ -161,14 +241,42 @@ function MainAppLayout() {
         case 'user-dashboard':
         case 'user-orders':
         case 'user-settings':
-          return isAuthenticated ? (
-            <UserDashboard
-              onNavigate={handleNavigate}
-              routeParams={routeParams}
-            />
-          ) : (
-            <Login onNavigate={handleNavigate} />
-          );
+          if (isAuthenticated) {
+            const role = getNormalizedRole(currentUser);
+            if (role === 'seller') {
+              setTimeout(() => handleNavigate('seller-dashboard'), 0);
+              return null;
+            }
+
+            return (
+              <UserDashboard
+                onNavigate={handleNavigate}
+                routeParams={routeParams}
+              />
+            );
+          } else {
+            return <Login onNavigate={handleNavigate} />;
+          }
+
+        case 'seller-landing':
+          return <SellerLanding onNavigate={handleNavigate} />;
+
+        case 'seller-onboarding':
+          return <SellerRegister onNavigate={handleNavigate} />;
+
+        case 'seller-dashboard':
+          if (!isAuthenticated) {
+            console.warn('⚠️ Seller access denied: Not authenticated');
+            return <Login onNavigate={handleNavigate} />;
+          }
+
+          const isSellerOnboarded = !!currentUser?.storeName || localStorage.getItem('isSellerOnboarded') === 'true';
+          if (!isSellerOnboarded) {
+            console.warn('⚠️ Seller access denied: Not onboarded yet');
+            return <SellerRegister onNavigate={handleNavigate} />;
+          }
+
+          return <SellerDashboard onNavigate={handleNavigate} />;
 
         case 'admin-dashboard':
           if (!isAuthenticated) {
@@ -220,7 +328,6 @@ function MainAppLayout() {
           }
 
           console.log('✅ Admin access granted');
-
           return <AdminDashboard onNavigate={handleNavigate} />;
 
         case 'about':
@@ -239,6 +346,30 @@ function MainAppLayout() {
           return <Terms onNavigate={handleNavigate} />;
 
         case 'login':
+          if (isAuthenticated && currentUser) {
+            const role = getNormalizedRole(currentUser);
+
+            if (role === 'seller') {
+              const onboarded = !!currentUser.storeName;
+              localStorage.setItem('isSellerOnboarded', onboarded ? 'true' : 'false');
+              localStorage.setItem('isLoggedIn', 'true');
+              
+              if (onboarded) {
+                setTimeout(() => handleNavigate('seller-dashboard'), 0);
+              } else {
+                setTimeout(() => handleNavigate('seller-onboarding'), 0);
+              }
+              return null;
+            } 
+            
+            if (isAdminUser(currentUser)) {
+              setTimeout(() => handleNavigate('admin-dashboard'), 0);
+              return null;
+            } 
+            
+            setTimeout(() => handleNavigate('home'), 0);
+            return null;
+          }
           return <Login onNavigate={handleNavigate} />;
 
         case 'register':
@@ -249,7 +380,6 @@ function MainAppLayout() {
 
         default:
           console.warn('⚠️ Unknown page:', currentPage);
-
           return (
             <Home
               onNavigate={handleNavigate}
@@ -289,29 +419,23 @@ function MainAppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-white font-sans antialiased text-gray-800">
-      {/* ============================== */}
       {/* Dynamic Header/Navbar */}
-      {/* ============================== */}
-      <Navbar
-        onNavigate={handleNavigate}
-        currentPage={currentPage}
-        isAuthenticated={isAuthenticated}
-        currentUser={currentUser}
-      />
+      {!isSellerPortal && (
+        <Navbar
+          onNavigate={handleNavigate}
+          currentPage={currentPage}
+          isAuthenticated={isAuthenticated}
+          currentUser={currentUser}
+        />
+      )}
 
-      {/* ============================== */}
       {/* Main Viewport Content */}
-      {/* ============================== */}
       <main className="flex-1">{renderPage()}</main>
 
-      {/* ============================== */}
       {/* Premium Footer */}
-      {/* ============================== */}
-      <Footer onNavigate={handleNavigate} />
+      {!isSellerPortal && <Footer onNavigate={handleNavigate} />}
 
-      {/* ============================== */}
       {/* Global Quick View Overlay Modal */}
-      {/* ============================== */}
       {quickViewProduct && (
         <QuickViewModal
           product={quickViewProduct}
@@ -320,9 +444,7 @@ function MainAppLayout() {
         />
       )}
 
-      {/* ============================== */}
       {/* Hot Toast Notification Config */}
-      {/* ============================== */}
       <Toaster
         position="bottom-right"
         reverseOrder={false}

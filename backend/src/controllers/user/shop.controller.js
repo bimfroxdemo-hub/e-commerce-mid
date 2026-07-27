@@ -1,6 +1,7 @@
 const Product = require('../../models/Product');
 const Category = require('../../models/Category');
 const { sendSuccess, sendError } = require('../../utils/response');
+const mongoose = require('mongoose');
 
 const getProducts = async (req, res) => {
   try {
@@ -21,8 +22,23 @@ const getProducts = async (req, res) => {
     // Build filter query
     const filter = { isActive: true };
 
+    // ✅ SCOPING: Resolve category slugs or names dynamically into active category Document ObjectIDs
     if (category) {
-      filter.category = category;
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        filter.category = category;
+      } else {
+        const catDoc = await Category.findOne({
+          $or: [
+            { slug: { $regex: new RegExp(`^${category}$`, 'i') } },
+            { name: { $regex: new RegExp(`^${category}$`, 'i') } }
+          ]
+        });
+        if (catDoc) {
+          filter.category = catDoc._id;
+        } else {
+          filter.category = null; // Forces empty result set if category slug is incorrect
+        }
+      }
     }
 
     if (minPrice || maxPrice) {
@@ -40,21 +56,17 @@ const getProducts = async (req, res) => {
       filter.tags = { $in: tagArray };
     }
 
-    // Build sort query
     const sort = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    // Get products
     const products = await Product.find(filter)
       .populate('category', 'name')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count for pagination
     const total = await Product.countDocuments(filter);
 
-    // Get price range for filters
     const priceRange = await Product.aggregate([
       { $match: { isActive: true } },
       {
@@ -66,7 +78,6 @@ const getProducts = async (req, res) => {
       }
     ]);
 
-    // Get available tags
     const allTags = await Product.aggregate([
       { $match: { isActive: true } },
       { $unwind: '$tags' },
@@ -96,25 +107,16 @@ const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id)
-      .populate('category', 'name description')
-      .populate({
-        path: 'reviews',
-        populate: {
-          path: 'user',
-          select: 'name avatar'
-        }
-      });
+    const product = await Product.findById(id).populate('category', 'name description');
 
     if (!product || !product.isActive) {
       return sendError(res, 'Product not found', 404);
     }
 
-    // Increment view count
     product.views += 1;
     await product.save();
 
-    // Get related products
+    // Query related products based on shared category
     const relatedProducts = await Product.find({
       category: product.category._id,
       _id: { $ne: product._id },

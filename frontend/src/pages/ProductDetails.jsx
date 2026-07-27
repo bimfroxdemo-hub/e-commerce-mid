@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { FiHeart, FiShoppingBag, FiStar, FiTruck, FiShield, FiCornerDownLeft, FiEye } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductDetails({ routeParams, onNavigate, onQuickView }) {
-  const { products, cart, wishlist, toggleWishlist, addToCart, trackProductView } = useApp();
+  const { products = [], cart = [], wishlist = [], toggleWishlist, addToCart, trackProductView } = useApp();
   const slug = routeParams?.slug;
 
   const product = products.find((p) => p.slug === slug || p.id === slug || p._id === slug) || products[0];
@@ -17,7 +17,7 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
 
   useEffect(() => {
     if (product) {
-      setActiveImage(product.image || '');
+      setActiveImage(product.image || (product.images && product.images[0]?.url) || '');
       if (trackProductView) trackProductView(product);
     }
   }, [product]);
@@ -32,15 +32,14 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
   );
 
   const productId = product.id || product._id;
-  const productSlug = product.slug || product.id || product._id;
-  const productStock = Number(product.stock) || 0;
+  const productStock = Number(product.inventory?.quantity ?? product.stock ?? 0);
   const isInStock = productStock > 0;
   const productPrice = Number(product.price) || 0;
-  const productOldPrice = Number(product.oldPrice) || 0;
+  const productOldPrice = Number(product.oldPrice || product.salePrice) || 0;
   const discountPercent = productOldPrice > productPrice ? Math.round(((productOldPrice - productPrice) / productOldPrice) * 100) : 0;
 
-  const isWishlisted = wishlist.some((item) => item.id === productId || item._id === productId);
-  const isInCart = cart.some((item) => item.id === productId || item._id === productId);
+  const isWishlisted = wishlist.some((item) => String(item.id || item._id) === String(productId));
+  const isInCart = cart.some((item) => String(item.id || item._id) === String(productId));
 
   const handleAddToCart = () => {
     if (!isInStock) { toast.error("This item is currently out of stock."); return; }
@@ -60,7 +59,17 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
     else { toast.error("Removed from wishlist"); }
   };
 
-  const relatedProducts = products.filter((p) => (p.category || '').toLowerCase() === (product.category || '').toLowerCase() && (p.id || p._id) !== productId).slice(0, 4);
+  // ✅ ENHANCED LOGIC: Safely evaluate category match utilizing ObjectId or slug strings
+  const relatedProducts = useMemo(() => {
+    const activeId = product._id || product.id;
+    const activeCat = product.category?._id || product.category?.id || product.category;
+
+    return products.filter((p) => {
+      const pId = p._id || p.id;
+      const pCat = p.category?._id || p.category?.id || p.category;
+      return String(pCat) === String(activeCat) && String(pId) !== String(activeId);
+    }).slice(0, 4);
+  }, [products, product]);
 
   return (
     <div id="product-details-page" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-fade-in bg-[#F8F8F8]">
@@ -81,10 +90,10 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
         <div className="lg:col-span-7 space-y-6">
           <div className="aspect-[3/4] md:aspect-[4/5] w-full rounded-2xl overflow-hidden bg-white border border-[#E0E0E0] relative group shadow-sm">
             <img 
-              src={activeImage || product.image} 
+              src={activeImage || product.image || (product.images && product.images[0]?.url)} 
               alt={product.name} 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-zoom-in" 
-              onClick={() => onQuickView(product)} // Add quick view on image click
+              onClick={() => onQuickView(product)}
             />
             
             {/* Badges */}
@@ -110,15 +119,15 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
               {(product.images || []).map((img, i) => (
                 <button 
                   key={i} 
-                  onClick={() => setActiveImage(img)} 
+                  onClick={() => setActiveImage(img.url || img)} 
                   className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-200 bg-[#F8F8F8] cursor-pointer group-thumb ${
-                    activeImage === img 
+                    activeImage === (img.url || img) 
                       ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]/20 scale-105' 
                       : 'border-transparent hover:border-[#E0E0E0]'
                   }`}
                 >
-                  <img src={img} alt="Thumb" className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform" />
-                  {activeImage === img && (
+                  <img src={img.url || img} alt="Thumb" className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform" />
+                  {activeImage === (img.url || img) && (
                     <span className="absolute bottom-0 right-0 bg-[#D4AF37] w-2 h-2 rounded-tl-sm"></span>
                   )}
                 </button>
@@ -139,8 +148,8 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
                     </span>
                     <div className="flex items-center space-x-1 bg-[#F8F8F8] px-2 py-1 rounded-lg">
                         <FiStar size={12} className="text-[#D4AF37] fill-[#D4AF37]" />
-                        <span className="text-xs font-bold text-[#1A1A3A]">{product.rating || 5.0}</span>
-                        <span className="text-[10px] text-[#6B7280]">({product.reviewsCount || 0})</span>
+                        <span className="text-xs font-bold text-[#1A1A3A]">{product.rating?.average || product.rating || 5.0}</span>
+                        <span className="text-[10px] text-[#6B7280]">({product.rating?.count || product.reviewsCount || 0})</span>
                     </div>
                 </div>
                 
@@ -228,7 +237,7 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
                     {isInCart ? 'Added to Bag' : 'Add To Bag'}
                 </button>
 
-                {/* Buy Now & Wishlist Buttons Mobile (if space allows) or Desktop */}
+                {/* Buy Now & Wishlist Buttons */}
                 <div className="flex sm:gap-3 items-center col-span-full sm:col-span-1 justify-between sm:justify-end">
                      <button 
                         onClick={handleBuyNow} 
@@ -281,7 +290,6 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
 
       {/* INFO TABS SECTION */}
       <section className="bg-white rounded-3xl p-6 md:p-8 border border-[#E0E0E0] shadow-sm relative overflow-hidden">
-         {/* Decorative Gradient Blob */}
          <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-[#D4AF37]/5 to-transparent rounded-full blur-2xl"></div>
 
         <div className="flex border-b border-[#E0E0E0] overflow-x-auto no-scrollbar space-x-6 pb-2 custom-scroll snap-x">
@@ -309,10 +317,10 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
           )}
           {activeTab === "specifications" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 bg-[#F8F8F8] p-6 rounded-2xl border border-[#E0E0E0]">
-                {Object.entries(product.specs || { Material: 'Premium Blend', Origin: 'India', Care: 'Dry Clean Only' }).map(([key, val]) => (
+                {Object.entries(product.specifications || { Material: 'Premium Blend', Origin: 'India', Care: 'Dry Clean Only' }).map(([key, val]) => (
                     <div key={key} className="flex justify-between items-center border-b border-[#E0E0E0] pb-2 last:border-0">
                         <span className="font-bold text-[#1A1A3A] text-xs sm:text-sm uppercase">{key}</span>
-                        <span className="text-[#333333] text-sm">{val}</span>
+                        <span className="text-[#333333] text-sm">{typeof val === 'object' ? JSON.stringify(val) : val}</span>
                     </div>
                 ))}
               </div>
@@ -333,7 +341,7 @@ export default function ProductDetails({ routeParams, onNavigate, onQuickView })
         <section className="space-y-8 animate-fade-in-up">
             <div className="flex items-center justify-between">
                 <h2 className="font-display font-extrabold text-2xl text-[#1A1A3A] uppercase tracking-tight">You May Also Like</h2>
-                <button onClick={() => onNavigate('shop', { category: product.category })} className="text-sm text-[#007A8A] font-bold uppercase hover:text-[#D4AF37] flex items-center gap-1">
+                <button onClick={() => onNavigate('shop', { category: product.category?._id || product.category })} className="text-sm text-[#007A8A] font-bold uppercase hover:text-[#D4AF37] flex items-center gap-1">
                     View All <FiEye size={14} />
                 </button>
             </div>

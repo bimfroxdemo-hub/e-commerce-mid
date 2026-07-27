@@ -1,61 +1,88 @@
-// Mock payment service - Replace with actual payment gateway integration
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
 class PaymentService {
-  async processPayment(paymentData) {
-    // Mock payment processing
-    const { amount, paymentMethod, cardDetails } = paymentData;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock success/failure based on amount (for demo purposes)
-    const success = Math.random() > 0.1; // 90% success rate
-    
-    if (success) {
+  constructor() {
+    // Initialize the Razorpay client using your test credentials from .env
+    this.razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+
+  /**
+   * Creates a Razorpay Order.
+   * Standard checkout requires creating an order on the backend first.
+   * @param {number} amount - Amount in INR (e.g., 500)
+   * @param {string} receiptId - A unique identifier (typically your local Database Order ID)
+   */
+  async createOrder(amount, receiptId) {
+    try {
+      const options = {
+        amount: Math.round(amount * 100), // Razorpay handles currency in paise (e.g. 500 INR = 50000 paise)
+        currency: 'INR',
+        receipt: receiptId,
+      };
+
+      const order = await this.razorpay.orders.create(options);
+      return order;
+    } catch (error) {
+      throw new Error('Razorpay Order Creation Failed: ' + error.message);
+    }
+  }
+
+  /**
+   * Verifies the cryptographic payment signature returned by the frontend popup.
+   * This ensures the transaction was actual, successful, and untampered.
+   */
+  verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature) {
+    try {
+      const text = `${razorpayOrderId}|${razorpayPaymentId}`;
+      const generatedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(text)
+        .digest('hex');
+
+      return generatedSignature === razorpaySignature;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Processes a refund via Razorpay APIs.
+   * @param {string} paymentId - The Razorpay payment ID (e.g., pay_xxxxx)
+   * @param {number} amount - Amount to refund in INR
+   */
+  async refundPayment(paymentId, amount) {
+    try {
+      const options = {
+        amount: Math.round(amount * 100), // convert to paise
+      };
+
+      // Perform real refund request
+      const refund = await this.razorpay.payments.refund(paymentId, options);
+
       return {
         success: true,
-        transactionId: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        amount,
-        paymentMethod,
-        status: 'completed'
+        refundId: refund.id,
+        transactionId: paymentId,
+        amount: refund.amount / 100, // convert back to INR for your logs
+        status: refund.status
       };
-    } else {
-      throw new Error('Payment failed. Please try again.');
+    } catch (error) {
+      throw new Error('Razorpay Refund Failed: ' + error.message);
     }
   }
 
-  async refundPayment(transactionId, amount) {
-    // Mock refund processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      success: true,
-      refundId: `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      transactionId,
-      amount,
-      status: 'refunded'
-    };
-  }
-
+  /**
+   * Legacy Mock Helper:
+   * Standard Razorpay integrations collect cards safely on the frontend modal (PCI-DSS compliant).
+   * Your server should not receive or validate credit cards directly anymore.
+   */
   async validateCard(cardDetails) {
-    const { cardNumber, expiryMonth, expiryYear, cvv } = cardDetails;
-    
-    // Basic validation
-    if (!cardNumber || cardNumber.length < 13 || cardNumber.length > 19) {
-      throw new Error('Invalid card number');
-    }
-    
-    if (!expiryMonth || expiryMonth < 1 || expiryMonth > 12) {
-      throw new Error('Invalid expiry month');
-    }
-    
-    if (!expiryYear || expiryYear < new Date().getFullYear()) {
-      throw new Error('Card has expired');
-    }
-    
-    if (!cvv || cvv.length < 3 || cvv.length > 4) {
-      throw new Error('Invalid CVV');
-    }
-    
+    // Left in place to prevent errors if called elsewhere.
+    // Card inputs are handled automatically by the secure Razorpay Checkout UI.
     return true;
   }
 }

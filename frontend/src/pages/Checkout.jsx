@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { checkoutAPI } from '../services/api'; // ✅ API methods import kiya gaya hai
 import {
   FiCheckCircle,
   FiShield,
@@ -34,6 +35,9 @@ export default function Checkout({ onNavigate }) {
   const [pincode, setPincode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [orderSuccessId, setOrderSuccessId] = useState(null);
+  
+  // 🔥 Processing state to disable button on click
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (savedAddresses.length > 0) {
@@ -51,6 +55,17 @@ export default function Checkout({ onNavigate }) {
       }
     }
   }, []);
+
+  // Helper function: Razorpay Checkout script ko dynamically load karne ke liye
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const handleSelectAddress = (addr) => {
     setSelectedAddressId(addr._id);
@@ -95,7 +110,7 @@ export default function Checkout({ onNavigate }) {
 
   const finalTotal = Math.max(0, cartSubtotal - discountAmount);
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
     if (!fullName || !phone || !street || !city || !pincode) {
@@ -103,50 +118,130 @@ export default function Checkout({ onNavigate }) {
       return;
     }
 
-    const newOrderId =
-      "LUX-" + Math.floor(10000 + Math.random() * 90000);
+    setIsProcessing(true);
 
-    const newOrderObj = {
-      id: newOrderId,
-      userId: currentUser?.id || 101,
-      date: new Date().toISOString().split("T")[0],
-      items: [...cart],
-      subtotal: cartSubtotal,
-      discount: discountAmount,
-      shipping: 0,
-      total: finalTotal,
-      paymentMethod:
-        paymentMethod === "upi"
-          ? "UPI"
-          : paymentMethod === "card"
-          ? "Credit Card"
-          : "COD",
-      shippingAddress: {
-        fullName,
-        street,
-        city,
-        state: stateName,
-        zipCode: pincode,
-        phone,
-      },
-      status: "Ordered",
-      trackingId: "",
-      timeline: [
-        {
-          title: "Order Placed",
-          time: new Date().toLocaleTimeString(),
-          active: true,
+    try {
+      const checkoutData = {
+        customerInfo: {
+          name: fullName,
+          email: currentUser?.email || "customer@luxestore.com",
+          phone: phone,
         },
-        { title: "Confirmed", time: "", active: false },
-        { title: "Shipped", time: "", active: false },
-        { title: "Delivered", time: "", active: false },
-      ],
-    };
+        shippingAddress: {
+          name: fullName, 
+          email: currentUser?.email || "customer@luxestore.com", 
+          phone: phone, 
+          address: street, 
+          city: city, 
+          state: stateName, 
+          pincode: pincode, 
+          country: 'India',
+        },
+        billingAddress: {
+          name: fullName,
+          address: street,
+          city: city,
+          state: stateName,
+          pincode: pincode,
+          country: 'India',
+        },
+        paymentMethod: (paymentMethod === 'upi' || paymentMethod === 'card') ? 'card' : 'cod', 
+        notes: '',
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        items: cart.map(item => ({
+          product: item._id || item.id,
+          quantity: item.quantity,
+        }))
+      };
 
-    setOrders((prev) => [newOrderObj, ...prev]);
-    setOrderSuccessId(newOrderId);
-    clearCart();
-    toast.success("Order Placed Successfully! 🎉");
+      console.log('🛒 Outgoing Checkout Payload:', checkoutData);
+
+      const response = await checkoutAPI.processCheckout(checkoutData);
+
+      if (!response.success) {
+        toast.error(response.message || "Failed to process checkout.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // ✅ Trigger Razorpay modal on checkout screen
+      if (response.data?.requiresPayment) {
+        const { razorpayOrder, order } = response.data;
+
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error("Razorpay SDK failed to load. Are you connected to the internet?");
+          setIsProcessing(false);
+          return;
+        }
+
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TEwh63sWlSdMfX", // ✅ Fixed: using new active Key ID as fallback
+          amount: razorpayOrder.amount, 
+          currency: razorpayOrder.currency,
+          name: 'Kabiraaz Fashion',
+          description: 'Secure Order Payment',
+          order_id: razorpayOrder.id,
+          handler: async function (rzpRes) {
+            setIsProcessing(true);
+            try {
+              const verificationPayload = {
+                razorpay_order_id: rzpRes.razorpay_order_id,
+                razorpay_payment_id: rzpRes.razorpay_payment_id,
+                razorpay_signature: rzpRes.razorpay_signature,
+                orderId: order._id, 
+              };
+
+              const verificationRes = await checkoutAPI.verifyPayment(verificationPayload);
+
+              if (verificationRes.success) {
+                // Success screen setup
+                setOrderSuccessId(order.orderId || order._id);
+                clearCart();
+                toast.success("Order Placed Successfully! 🎉");
+              } else {
+                toast.error(verificationRes.message || "Payment verification failed.");
+              }
+            } catch (err) {
+              console.error(err);
+              toast.error("Something went wrong during payment verification.");
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: fullName,
+            contact: phone,
+            email: currentUser?.email || "customer@luxestore.com",
+          },
+          theme: {
+            color: '#007A8A', 
+          },
+          modal: {
+            ondismiss: function () {
+              toast.error("Payment modal cancelled.");
+              setIsProcessing(false);
+            },
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+
+      } else {
+        // Cash on Delivery (COD) Flow
+        const finalOrder = response.data.order;
+        setOrderSuccessId(finalOrder.orderId || finalOrder._id);
+        clearCart();
+        toast.success("Order Placed (COD) Successfully! 🎉");
+        setIsProcessing(false);
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || "An unexpected error occurred during checkout.");
+      setIsProcessing(false);
+    }
   };
 
   if (orderSuccessId) {
@@ -630,12 +725,22 @@ export default function Checkout({ onNavigate }) {
                   </span>
                 </div>
 
+                {/* Place Order Button with dynamic disable & loading states */}
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4AF37] py-3.5 text-xs font-black uppercase tracking-widest text-[#1A1A3A] transition-all hover:bg-[#B8941F] hover:shadow-md sm:text-sm"
+                  disabled={isProcessing}
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4AF37] py-3.5 text-xs font-black uppercase tracking-widest text-[#1A1A3A] transition-all hover:bg-[#B8941F] hover:shadow-md sm:text-sm ${
+                    isProcessing ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
-                  <FiHeart size={16} />
-                  Place Order
+                  {isProcessing ? (
+                    <span>Processing Order...</span>
+                  ) : (
+                    <>
+                      <FiHeart size={16} />
+                      <span>Place Order</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="flex items-center justify-center gap-2 pt-1 text-[#666666]">

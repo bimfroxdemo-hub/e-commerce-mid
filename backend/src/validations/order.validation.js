@@ -27,7 +27,7 @@ const createOrderValidation = [
     .withMessage('Please provide a valid phone number'),
   
   body('paymentMethod')
-    .isIn(['card', 'paypal', 'cod'])
+    .isIn(['card', 'paypal', 'cod', 'razorpay', 'upi']) // ✅ Fixed: added 'razorpay' and 'upi' to the allowed array
     .withMessage('Invalid payment method')
 ];
 

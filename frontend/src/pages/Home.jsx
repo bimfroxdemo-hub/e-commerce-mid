@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 import AtelierReels from '../components/AtelierReels';
@@ -8,6 +8,7 @@ import {
   FiStar,
   FiArrowRight,
   FiShield,
+  FiCornerDownLeft,
   FiTruck,
   FiRefreshCw,
   FiAward,
@@ -70,6 +71,38 @@ export default function Home({ onNavigate, onQuickView }) {
     siteSettings  = {},
   } = useApp();
 
+  // Safeguard: Exclude placeholder/home/collections page markers from displaying in categories grid
+  const displayCategories = categories.filter(
+    (cat) => 
+      cat.slug?.toLowerCase() !== 'home' && 
+      cat.name?.toLowerCase() !== 'home' &&
+      cat.slug?.toLowerCase() !== 'home-page' &&
+      cat.slug !== '/' &&
+      cat.name?.toLowerCase() !== 'collections'
+  );
+
+  // Dynamic promo banners state reading configuration from local storage dynamically
+  const [promoBanners, setPromoBanners] = useState(() => {
+    try {
+      const saved = localStorage.getItem('luxe_banners_config');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Listen to storage events to update real-time if configured in tabs
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('luxe_banners_config');
+        if (saved) setPromoBanners(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   /* ── hero slider ── */
   const heroSlides = [
     {
@@ -100,7 +133,7 @@ export default function Home({ onNavigate, onQuickView }) {
   const hero = useSlider(heroSlides.length, 6000);
 
   /* ── category slider (mobile) ── */
-  const catSlider = useSlider(Math.max(1, Math.ceil(categories.length / 2)), 3200);
+  const catSlider = useSlider(Math.max(1, Math.ceil(displayCategories.length / 2)), 3200);
 
   /* ── product row drag ── */
   const dealDrag     = useDragScroll();
@@ -108,6 +141,7 @@ export default function Home({ onNavigate, onQuickView }) {
   const trendDrag    = useDragScroll();
   const bsDrag       = useDragScroll();
   const recentDrag   = useDragScroll();
+  const interestDrag = useDragScroll();
 
   /* ── countdown ── */
   const [timeLeft, setTimeLeft] = useState({ hours: 8, minutes: 42, seconds: 15 });
@@ -127,6 +161,39 @@ export default function Home({ onNavigate, onQuickView }) {
   const trending   = products.filter((p) => (p.tags||[]).includes('trending')).slice(0, 8);
   const deals      = products.filter((p) => (p.tags||[]).includes('deal')).slice(0, 8);
   const bestSell   = products.filter((p) => (p.tags||[]).includes('best-seller')).slice(0, 8);
+
+  // ==========================================
+  // ✅ REAL-TIME DYNAMIC INTEREST RECOMMENDATIONS
+  // ==========================================
+  const interestCategory = useMemo(() => {
+    if (!recentlyViewed || recentlyViewed.length === 0) return null;
+    const catCounts = {};
+    recentlyViewed.forEach(p => {
+      const catName = p.category?.name || p.category || '';
+      if (catName) {
+        catCounts[catName] = (catCounts[catName] || 0) + 1;
+      }
+    });
+    
+    let favoriteCategory = null;
+    let maxCount = 0;
+    for (const [cat, count] of Object.entries(catCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        favoriteCategory = cat;
+      }
+    }
+    return favoriteCategory;
+  }, [recentlyViewed]);
+
+  const interestProducts = useMemo(() => {
+    if (!interestCategory) return [];
+    return products.filter(p => 
+      p.isActive &&
+      String(p.category?.name || p.category || '').toLowerCase() === interestCategory.toLowerCase() &&
+      !recentlyViewed.some(rv => String(rv._id || rv.id) === String(p._id || p.id))
+    ).slice(0, 8);
+  }, [products, interestCategory, recentlyViewed]);
 
   /* ── shared styles ── */
   const scrollRow = {
@@ -188,9 +255,7 @@ export default function Home({ onNavigate, onQuickView }) {
   return (
     <div className="pb-16" style={{ backgroundColor: '#F4F4F6' }}>
 
-      {/* ══════════════════════════════════════
-          1. HERO
-      ══════════════════════════════════════ */}
+      {/* 1. HERO */}
       <section className="relative overflow-hidden w-full" style={{ height: 'clamp(480px,82vh,760px)' }}>
 
         <AnimatePresence mode="sync">
@@ -294,15 +359,13 @@ export default function Home({ onNavigate, onQuickView }) {
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
           {heroSlides.map((_, i) => (
             <button key={i} onClick={() => hero.go(i)} className="rounded-full transition-all duration-400"
-              style={{ width: i === hero.idx ? '30px' : '7px', height: '7px', backgroundColor: i === hero.idx ? '#D4AF37' : 'rgba(212,175,55,0.36)' }}
+              style={{ width: i === hero.idx ? '30px' : '7px', height: '7px', backgroundColor: i === hero.idx ? '#D4AF37' : 'rgba(212,175,55,0.35)' }}
             />
           ))}
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          2. TRUST BADGES
-      ══════════════════════════════════════ */}
+      {/* 2. TRUST BADGES */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 -mt-6 relative z-20">
         <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl"
           style={{ background: 'linear-gradient(135deg,#1A1A3A 0%,#252560 50%,#1A1A3A 100%)', border: '1px solid rgba(212,175,55,0.15)' }}
@@ -336,16 +399,13 @@ export default function Home({ onNavigate, onQuickView }) {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          3. CATEGORIES
-          Desktop: grid | Mobile: auto-slider
-      ══════════════════════════════════════ */}
+      {/* 3. CATEGORIES */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
-        <SH eyebrow="Explore Ateliers" title="Shop By Category" viewAll onViewAll={() => onNavigate('shop')} />
+        <SH eyebrow="Explore Ateliers" title="Shop By Collection" viewAll onViewAll={() => onNavigate('shop')} />
 
         {/* ── DESKTOP grid ── */}
         <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {categories.map((cat, i) => (
+          {displayCategories.map((cat, i) => (
             <CatCard key={cat.id || cat._id || i} cat={cat} onNavigate={onNavigate} />
           ))}
         </div>
@@ -359,7 +419,7 @@ export default function Home({ onNavigate, onQuickView }) {
                 exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.38 }}
                 className="grid grid-cols-2 gap-3"
               >
-                {categories
+                {displayCategories
                   .slice(catSlider.idx * 2, catSlider.idx * 2 + 2)
                   .map((cat, i) => (
                     <CatCard key={cat.id || cat._id || i} cat={cat} onNavigate={onNavigate} />
@@ -369,7 +429,7 @@ export default function Home({ onNavigate, onQuickView }) {
           </div>
           {/* dots */}
           <div className="flex justify-center gap-1.5 mt-3">
-            {Array.from({ length: Math.ceil(categories.length / 2) }).map((_, i) => (
+            {Array.from({ length: Math.ceil(displayCategories.length / 2) }).map((_, i) => (
               <button key={i} onClick={() => catSlider.go(i)}
                 className="rounded-full transition-all duration-400"
                 style={{ width: i === catSlider.idx ? '22px' : '6px', height: '6px', backgroundColor: i === catSlider.idx ? '#D4AF37' : 'rgba(212,175,55,0.35)' }}
@@ -379,9 +439,29 @@ export default function Home({ onNavigate, onQuickView }) {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          4. OUTLET VAULT
-      ══════════════════════════════════════ */}
+      {/* ==========================================
+          ✅ NEW: "BASED ON YOUR INTERESTS" PERSONALIZATION
+      ========================================== */}
+      {interestCategory && interestProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
+          <SH 
+            eyebrow="Personalized For You" 
+            title={`Based on your interest in ${interestCategory}`} 
+            viewAll 
+            onViewAll={() => onNavigate('shop', { category: interestCategory })} 
+          />
+          <div className="sm:hidden">
+            <MobileRow drag={interestDrag} items={interestProducts} />
+          </div>
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {interestProducts.slice(0, 4).map((item) => (
+              <ProductCard key={item.id || item._id} product={item} onNavigate={onNavigate} onQuickView={onQuickView} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 4. OUTLET VAULT */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
         <div className="relative rounded-3xl overflow-hidden"
           style={{ background: 'linear-gradient(135deg,#060614 0%,#1A1A3A 45%,#0a0a1e 100%)', border: '1px solid rgba(212,175,55,0.12)', boxShadow: '0 28px 70px rgba(10,10,30,0.4)' }}
@@ -481,7 +561,6 @@ export default function Home({ onNavigate, onQuickView }) {
                 );
               })}
 
-              {/* rings */}
               <div className="absolute rounded-full border border-dashed pointer-events-none"
                 style={{ width: 'clamp(220px,34vw,330px)', height: 'clamp(220px,34vw,330px)', borderColor: 'rgba(212,175,55,0.1)', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }} />
             </div>
@@ -489,9 +568,7 @@ export default function Home({ onNavigate, onQuickView }) {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          5. TODAY'S DEALS
-      ══════════════════════════════════════ */}
+      {/* 5. TODAY'S DEALS */}
       {deals.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
           <SH eyebrow="Exclusive Markdown" title="Today's Luxury Deals" viewAll onViewAll={() => onNavigate('shop', { filter: 'deal' })} />
@@ -508,9 +585,7 @@ export default function Home({ onNavigate, onQuickView }) {
         </section>
       )}
 
-      {/* ══════════════════════════════════════
-          6. FEATURED
-      ══════════════════════════════════════ */}
+      {/* 6. FEATURED */}
       {featured.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
           <SH eyebrow="Handpicked Masterpieces" title="Featured Collection" viewAll onViewAll={() => onNavigate('shop')} />
@@ -525,18 +600,65 @@ export default function Home({ onNavigate, onQuickView }) {
         </section>
       )}
 
-      {/* ══════════════════════════════════════
-          7. EDITORIAL BANNERS
-          Desktop: 3-col grid | Mobile: slider
-      ══════════════════════════════════════ */}
+      {/* 7. DYNAMIC PROMOTIONAL BANNERS (LEFT BLOCK / RIGHT BLOCK) */}
+      {promoBanners && (promoBanners.banner1 || promoBanners.banner2) && (
+        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
+          <div className="flex items-end justify-between mb-4 sm:mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-[2px] w-5 rounded-full" style={{ background: 'linear-gradient(90deg,#D4AF37,transparent)' }} />
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]" style={{ color: '#007A8A' }}>Boutique Spotlights</span>
+              </div>
+              <h2 className="font-sans font-bold text-lg sm:text-xl md:text-2xl tracking-tight" style={{ color: '#1A1A3A' }}>Featured Spotlights</h2>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6">
+            {[promoBanners.banner1, promoBanners.banner2].map((banner, i) => {
+              if (!banner) return null;
+              return (
+                <div 
+                  key={i} 
+                  onClick={() => onNavigate('shop')}
+                  className="group relative rounded-3xl overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
+                  style={{ height: 'clamp(280px,38vw,360px)' }}
+                >
+                  <img 
+                    src={banner.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1200'} 
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                  />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(8,8,22,0.9) 0%, rgba(8,8,22,0.3) 50%, transparent 100%)' }} />
+                  <div className="absolute inset-0 flex flex-col justify-between p-6">
+                    <span className="inline-block self-start text-white text-[8px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-500 shadow-md">
+                      {banner.badge}
+                    </span>
+                    <div className="space-y-2">
+                      <h3 className="font-sans font-bold text-xl sm:text-2xl text-white uppercase leading-tight">
+                        {banner.title}
+                      </h3>
+                      <p className="text-xs text-white/70 line-clamp-2 max-w-sm">
+                        {banner.description}
+                      </p>
+                      <span className="inline-block text-[10px] font-black uppercase text-[#D4AF37] tracking-wider group-hover:translate-x-1.5 transition-transform duration-300">
+                        Explore Collection →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 8. EDITORIAL BANNERS */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
         <SH eyebrow="Curated Collections" title="Atelier Editions" />
         <EditorialBanners onNavigate={onNavigate} />
       </section>
 
-      {/* ══════════════════════════════════════
-          8. TRENDING
-      ══════════════════════════════════════ */}
+      {/* 9. TRENDING */}
       {trending.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
           <SH eyebrow="High-Demand Drops" title="Trending Now" viewAll onViewAll={() => onNavigate('shop')} />
@@ -551,9 +673,7 @@ export default function Home({ onNavigate, onQuickView }) {
         </section>
       )}
 
-      {/* ══════════════════════════════════════
-          9. BEST SELLERS
-      ══════════════════════════════════════ */}
+      {/* 10. BEST SELLERS */}
       {bestSell.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
           <SH eyebrow="Hall of Fame" title="Best Sellers" viewAll onViewAll={() => onNavigate('shop')} />
@@ -568,9 +688,7 @@ export default function Home({ onNavigate, onQuickView }) {
         </section>
       )}
 
-      {/* ══════════════════════════════════════
-          10. RECENTLY VIEWED
-      ══════════════════════════════════════ */}
+      {/* 11. RECENTLY VIEWED */}
       {recentlyViewed.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-12 sm:mt-14">
           <SH eyebrow="Welcome Back" title="Recently Viewed" />
@@ -585,26 +703,18 @@ export default function Home({ onNavigate, onQuickView }) {
         </section>
       )}
 
-      {/* ══════════════════════════════════════
-          11. TESTIMONIALS
-      ══════════════════════════════════════ */}
+      {/* 12. TESTIMONIALS */}
       <TestimonialsSection />
 
-      {/* ══════════════════════════════════════
-          12. BLOG
-      ══════════════════════════════════════ */}
+      {/* 13. BLOG */}
       <BlogSection />
 
-      {/* ══════════════════════════════════════
-          13. ATELIER REELS
-      ══════════════════════════════════════ */}
+      {/* 14. ATELIER REELS */}
       <div className="mt-12 sm:mt-14">
         <AtelierReels siteSettings={siteSettings} onNavigate={onNavigate} />
       </div>
 
-      {/* ══════════════════════════════════════
-          14. NEWSLETTER
-      ══════════════════════════════════════ */}
+      {/* 15. NEWSLETTER */}
       <NewsletterSection />
     </div>
   );
@@ -617,7 +727,13 @@ export default function Home({ onNavigate, onQuickView }) {
 function CatCard({ cat, onNavigate }) {
   return (
     <div
-      onClick={() => onNavigate('shop', { category: cat.slug || cat.name })}
+      onClick={() => {
+        if (typeof onNavigate === 'function') {
+          onNavigate('shop', { category: cat.slug || cat.name });
+        } else {
+          console.warn("⚠️ 'onNavigate' prop is missing in Home component. Please check your App.jsx routing!");
+        }
+      }}
       className="group relative rounded-2xl overflow-hidden cursor-pointer shadow hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
       style={{ aspectRatio: '4/5' }}
     >
@@ -653,7 +769,6 @@ function CatCard({ cat, onNavigate }) {
   );
 }
 
-/* Editorial banners — desktop 3-col, mobile auto-slider */
 function EditorialBanners({ onNavigate }) {
   const cards = [
     {
@@ -689,12 +804,10 @@ function EditorialBanners({ onNavigate }) {
 
   return (
     <>
-      {/* desktop */}
       <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
         {cards.map((c, i) => <EditCard key={i} c={c} />)}
       </div>
 
-      {/* mobile slider */}
       <div className="md:hidden relative">
         <AnimatePresence mode="wait">
           <motion.div key={s.idx}
@@ -704,7 +817,6 @@ function EditorialBanners({ onNavigate }) {
             <EditCard c={cards[s.idx]} />
           </motion.div>
         </AnimatePresence>
-        {/* nav */}
         <div className="flex items-center justify-between mt-3">
           <button onClick={s.prev} className="w-8 h-8 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37' }}>
@@ -792,12 +904,10 @@ function TestimonialsSection() {
           <h2 className="font-sans font-bold text-xl sm:text-2xl uppercase" style={{ color: '#F8F8F8' }}>What Our Patrons Say</h2>
         </div>
 
-        {/* desktop grid */}
         <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
           {testimonials.map((t, i) => <TestiCard key={i} t={t} />)}
         </div>
 
-        {/* mobile slider */}
         <div className="sm:hidden">
           <AnimatePresence mode="wait">
             <motion.div key={s.idx}
@@ -870,12 +980,10 @@ function BlogSection() {
         </div>
       </div>
 
-      {/* desktop */}
       <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
         {blogs.map((b, i) => <BlogCard key={i} b={b} />)}
       </div>
 
-      {/* mobile slider */}
       <div className="sm:hidden">
         <AnimatePresence mode="wait">
           <motion.div key={s.idx}
@@ -915,7 +1023,7 @@ function BlogCard({ b }) {
             style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', backdropFilter: 'blur(8px)' }}>{b.readTime}</span>
         </div>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20"
-          style={{ backgroundColor: 'rgba(26,26,58,0.35)' }}>
+          style={{ background: 'rgba(26,26,58,0.35)' }}>
           <div className="w-10 h-10 rounded-full flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300"
             style={{ backgroundColor: '#D4AF37', color: '#1A1A3A' }}>
             <FiArrowRight size={15} />

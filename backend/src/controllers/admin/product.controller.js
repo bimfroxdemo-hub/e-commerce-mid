@@ -53,13 +53,11 @@ const generateUniqueSKU = async (name = 'PROD') => {
 const resolveCategory = async (category) => {
   let categoryDoc = null;
 
-  // Case 1: Valid MongoDB ObjectId
   if (category && mongoose.Types.ObjectId.isValid(category)) {
     categoryDoc = await Category.findById(category);
     if (categoryDoc) return categoryDoc;
   }
 
-  // Case 2: Category name like "Women"
   if (typeof category === 'string' && category.trim() && category !== 'null') {
     const cleanName = category.trim();
 
@@ -82,7 +80,6 @@ const resolveCategory = async (category) => {
       });
 
       console.log(`✅ Auto-created category: ${cleanName}`);
-
       return categoryDoc;
     } catch (catError) {
       console.warn('⚠️ Category create failed:', catError.message);
@@ -96,7 +93,6 @@ const resolveCategory = async (category) => {
     }
   }
 
-  // Case 3: Fallback General category
   categoryDoc = await Category.findOne({ name: { $regex: /^general$/i } });
 
   if (!categoryDoc) {
@@ -125,12 +121,25 @@ const getAllProducts = async (req, res) => {
       category,
       status,
       sortBy = 'createdAt',
-      sortOrder = 'desc'
+      sortOrder = 'desc',
+      seller // Allows admins to filter by seller in the query parameters
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const filter = {};
+
+    // ✅ ENHANCED SCOPING: Lock sellers to their own store. Let Admins search globally or filter by specific seller ID.
+    if (req.user) {
+      if (req.user.role === 'seller') {
+        filter.seller = req.user._id;
+      } else if (req.user.role === 'admin' && seller) {
+        if (mongoose.Types.ObjectId.isValid(seller)) {
+          filter.seller = seller;
+        } else if (seller === 'none' || seller === 'system') {
+          filter.seller = { $exists: false }; // Query system/global products
+        }
+      }
+    }
 
     if (search) {
       filter.$or = [
@@ -196,6 +205,14 @@ const getProduct = async (req, res) => {
       });
     }
 
+    // ✅ SECURITY BLOCK: Prevent seller from modifying others' products
+    if (req.user && req.user.role === 'seller' && String(product.seller) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not own this product'
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Product fetched successfully',
@@ -226,7 +243,8 @@ const createProduct = async (req, res) => {
       specifications,
       tags,
       isFeatured,
-      images: bodyImages
+      images: bodyImages,
+      seller // Allows admins to explicitly define product owner
     } = req.body;
 
     if (!name || price === undefined || price === null) {
@@ -285,6 +303,18 @@ const createProduct = async (req, res) => {
         ? tags.split(',').map((tag) => tag.trim()).filter(Boolean)
         : ['New'];
 
+    // ✅ DYNAMIC OWNERSHIP ASSIGNMENT
+    let finalSellerId = undefined; // Admin-created products are global by default
+
+    if (req.user) {
+      if (req.user.role === 'seller') {
+        finalSellerId = req.user._id; // Forced ownership scoping for sellers
+      } else if (req.user.role === 'admin') {
+        // If Admin explicitly selected a seller from the option list, assign it; otherwise keep it global
+        finalSellerId = seller && mongoose.Types.ObjectId.isValid(seller) ? seller : undefined;
+      }
+    }
+
     const product = await Product.create({
       name: name.trim(),
       description: description?.trim() || 'Modern luxury apparel item.',
@@ -302,7 +332,8 @@ const createProduct = async (req, res) => {
       },
       tags: parsedTags,
       isActive: true,
-      isFeatured: isFeatured === true || isFeatured === 'true'
+      isFeatured: req.user && req.user.role === 'admin' ? (isFeatured === true || isFeatured === 'true') : false, // Only admins can flag featured products
+      seller: finalSellerId
     });
 
     await product.populate('category', 'name slug');
@@ -338,7 +369,8 @@ const updateProduct = async (req, res) => {
       tags,
       isFeatured,
       isActive,
-      images: bodyImages
+      images: bodyImages,
+      seller // Allows admins to re-assign product owner
     } = req.body;
 
     const product = await Product.findById(req.params.id);
@@ -347,6 +379,14 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
+      });
+    }
+
+    // ✅ SECURITY BLOCK: Prevent seller from modifying others' products
+    if (req.user && req.user.role === 'seller' && String(product.seller) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not own this product'
       });
     }
 
@@ -392,11 +432,16 @@ const updateProduct = async (req, res) => {
     }
 
     if (isFeatured !== undefined) {
-      product.isFeatured = isFeatured === true || isFeatured === 'true';
+      product.isFeatured = req.user && req.user.role === 'admin' ? (isFeatured === true || isFeatured === 'true') : product.isFeatured;
     }
 
     if (isActive !== undefined) {
       product.isActive = isActive === true || isActive === 'true';
+    }
+
+    // ✅ ENHANCED ADMIN CAPABILITY: Let admins transfer product ownership
+    if (req.user && req.user.role === 'admin' && seller !== undefined) {
+      product.seller = seller && mongoose.Types.ObjectId.isValid(seller) ? seller : undefined;
     }
 
     if (req.files && req.files.length > 0) {
@@ -452,6 +497,14 @@ const deleteProduct = async (req, res) => {
       });
     }
 
+    // ✅ SECURITY BLOCK: Prevent seller from deleting others' products
+    if (req.user && req.user.role === 'seller' && String(product.seller) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not own this product'
+      });
+    }
+
     await Product.findByIdAndDelete(req.params.id);
 
     return res.status(200).json({
@@ -481,6 +534,14 @@ const deleteProductImage = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
+      });
+    }
+
+    // ✅ SECURITY BLOCK: Prevent seller from modifying others' products
+    if (req.user && req.user.role === 'seller' && String(product.seller) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not own this product'
       });
     }
 
@@ -527,8 +588,15 @@ const bulkUpdateStatus = async (req, res) => {
       });
     }
 
+    const query = { _id: { $in: productIds } };
+
+    // ✅ SCOPING RULE: Ensure seller can only bulk update active status on their own products
+    if (req.user && req.user.role === 'seller') {
+      query.seller = req.user._id;
+    }
+
     await Product.updateMany(
-      { _id: { $in: productIds } },
+      query,
       { isActive: Boolean(isActive) }
     );
 

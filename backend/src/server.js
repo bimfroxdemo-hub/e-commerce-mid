@@ -34,8 +34,7 @@ const createDefaultAdmin = async () => {
 
 // ==================== START SERVER (Local Only) ====================
 if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5001;  // Ensure PORT is defined
-  
+  // Removed redundant const PORT declaration here to use the outer PORT definition
   app.listen(PORT, () => {
     console.log('=================================');
     console.log(`🚀 Server running on port ${PORT}`);
@@ -43,7 +42,6 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`🔗 URL: http://localhost:${PORT}`);
     console.log('=================================');
     
-    // Safety check - agar function exist karta hai toh hi call karo
     if (typeof createDefaultAdmin === 'function') {
       createDefaultAdmin().catch(err => {
         console.error('⚠️ Admin creation failed:', err.message);
@@ -52,7 +50,6 @@ if (process.env.NODE_ENV !== 'production') {
   });
   
   // ==================== ERROR HANDLERS (Local Only) ====================
-  // ⚠️ Vercel pe mat rakho - yeh serverless function ko hang/timeout kar dete hain
   process.on('unhandledRejection', (err) => {
     console.error('❌ Unhandled Promise Rejection:', err.message);
     console.error(err.stack);
@@ -61,11 +58,9 @@ if (process.env.NODE_ENV !== 'production') {
   process.on('uncaughtException', (err) => {
     console.error('❌ Uncaught Exception:', err.message);
     console.error(err.stack);
-    // Local dev mein crash karna sahi hai, Vercel pe nahi
     process.exit(1);
   });
 }
 
-// ==================== VERCEL EXPORT (ये सबसे जरूरी है) ====================
-// Vercel automatically is app ko serverless function mein convert karega
+// ==================== VERCEL EXPORT ====================
 module.exports = app;

@@ -17,7 +17,6 @@ const {
 } = require('../../validations/product.validation');
 
 const authenticateModule = require('../../middleware/auth');
-const adminModule = require('../../middleware/admin');
 const uploadModule = require('../../middleware/upload');
 const validateModule = require('../../middleware/validate');
 
@@ -26,10 +25,8 @@ const authenticate =
     ? authenticateModule
     : authenticateModule.authenticate;
 
-const adminOnly =
-  typeof adminModule === 'function'
-    ? adminModule
-    : adminModule.adminOnly;
+// Dynamic shared permission check
+const adminOrSeller = authenticateModule.adminOrSeller;
 
 const validate =
   typeof validateModule === 'function'
@@ -42,7 +39,7 @@ const handleUpload =
     : uploadModule.handleUpload;
 
 router.use(authenticate);
-router.use(adminOnly);
+router.use(adminOrSeller); // Updated from adminOnly to allow active merchants
 
 router.get('/', getAllProducts);
 router.get('/:id', getProduct);
